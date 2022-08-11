@@ -27,7 +27,7 @@ use std::{
 ///    .is_err());
 /// }
 /// ```
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct AnyValue {
     /// 用于存放实际对象
     pointer: *mut u8,
@@ -37,6 +37,12 @@ pub struct AnyValue {
 
     /// 数据是否已取出
     is_taken: bool,
+}
+
+impl std::fmt::Debug for AnyValue {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("AnyValue").field(&self.type_name).finish()
+    }
 }
 unsafe impl Send for AnyValue {}
 unsafe impl Sync for AnyValue {}
@@ -142,20 +148,16 @@ impl AnyValue {
 /// 与&指针不同的是，可以在一定程度简化对生命周期的定义。
 /// 用于代替&指针，支持以指定类型存入数据，又以指定类型进行取出
 /// 存入与取出数据时类型需保持一致
-/// 需要注意的是，AnyValue被简化为了Send+Sync类型的，但存入的数据并不做检查
+/// 需要注意的是，AnyRef被简化为了Send+Sync类型的，但存入的数据并不做检查
 /// 在多线程环境下的使用，其数据安全性由开发者自身确认
 ///
 /// ```
 /// #[test]
 /// fn test() {
-///     assert_eq!(AnyValue::new(1).take::<i32>(), 1);
-///     assert_eq!(AnyValue::new("2").take::<&str>(), "2");
-///     assert_ne!(AnyValue::new(1).take::<i32>(), 2);
-///     assert_ne!(AnyValue::new("1").take::<&str>(), "2");
-///     assert!(panic::catch_unwind(|| {
-///         AnyValue::new("2").take::<i32>();
-///     })
-///    .is_err());
+// assert_eq!(*AnyRef::new(&1).as_ref::<i32>(), 1);
+// assert_eq!(*AnyRef::new(&"2").as_mut::<&str>(), "2");
+// assert_ne!(*AnyRef::new(&1).as_ref::<i32>(), 2);
+// assert_ne!(*AnyRef::new(&"1").as_mut::<&str>(), "2");
 /// }
 /// ```
 #[derive(Debug, Clone)]

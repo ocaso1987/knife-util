@@ -105,11 +105,15 @@ impl Error for AppError {
         &self.msg
     }
 }
+pub type Result<T> = ::std::result::Result<T, AppError>;
 
 lazy_static! {
 
     /// 全局数据格式转换异常
     pub static ref ERR_CONVERT: AppError = AppError::new("ERR_CONVERT", "100001", "数据转换出现异常");
+
+    /// 全局数据内部格式转换异常
+    pub static ref ERR_CAST: AppError = AppError::new("ERR_CAST", "100001", "数据内部转换出现异常");
 
     /// 全局数据解析异常
     pub static ref ERR_PARSE: AppError = AppError::new("ERR_PARSE", "100002", "数据解析出现异常");

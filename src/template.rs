@@ -11,7 +11,7 @@ use lazy_static::lazy_static;
 use serde::Serialize;
 use serde_json::Value;
 
-use crate::{AppError, MapUtil, ERR_ARGUMENT, ERR_FORMAT};
+use crate::{MapUtil, Result, ERR_ARGUMENT, ERR_FORMAT};
 
 lazy_static! {
     static ref GLOBAL_TEMPLATE: Arc<Mutex<Handlebars<'static>>> =
@@ -28,7 +28,7 @@ fn get_handlebars() -> MutexGuard<'static, Handlebars<'static>> {
 }
 
 /// 根据内容文本渲染模板
-pub fn render_template<C>(template: String, context: &C) -> Result<String, AppError>
+pub fn render_template<C>(template: String, context: &C) -> Result<String>
 where
     C: Serialize,
 {
@@ -49,7 +49,7 @@ pub enum ContextType {
     },
     // 值类型
     ValueType(Value),
-    InvokerType(Box<dyn Fn(&HashMap<String, ContextType>) -> Value>),
+    InvokerType(Box<dyn Fn(&mut HashMap<String, ContextType>) -> Value>),
 }
 
 impl ContextType {
@@ -66,7 +66,7 @@ impl ContextType {
 pub fn render_template_recursion(
     context: &HashMap<String, ContextType>,
     key: &str,
-) -> Result<String, AppError> {
+) -> Result<String> {
     let (root_template, root_attrs) = match context.get(&key.to_string()) {
         Some(v) => match v {
             ContextType::TemplateType { template, attrs } => (template.clone(), attrs),
@@ -94,6 +94,10 @@ pub fn render_template_recursion(
                     param.insert(item_name.to_string(), v.clone());
                 }
                 ContextType::InvokerType(it) => {
+                    let context = unsafe {
+                        &mut *(context as *const HashMap<String, ContextType>
+                            as *mut HashMap<String, ContextType>)
+                    };
                     param.insert(item_name.to_string(), it.as_ref()(context));
                 }
             },
@@ -103,41 +107,19 @@ pub fn render_template_recursion(
     render_template(root_template, &param)
 }
 
+pub trait TemplateContextUtil {
+    /// 插入模板类型
+    fn insert_template(&mut self, key: &str, template: &str, attrs: Vec<&str>);
+    fn insert_invoker(
+        &mut self,
+        key: &str,
+        invoker: Box<dyn Fn(&mut HashMap<String, ContextType>) -> Value>,
+    );
+}
+
 impl MapUtil for HashMap<String, ContextType> {
-    fn get_bool(&self, key: &str) -> bool {
-        self.get(key)
-            .expect(format!("Map对象中{}不存在", key).as_str())
-            .get_value()
-            .as_bool()
-            .unwrap()
-    }
-
-    fn insert_string(&mut self, key: &str, value: String) {
-        self.insert(
-            key.to_string(),
-            ContextType::ValueType(Value::String(value)),
-        );
-    }
-
-    fn get_string(&self, key: &str) -> String {
-        self.get(key)
-            .expect(format!("Map对象中{}不存在", key).as_str())
-            .get_value()
-            .as_str()
-            .unwrap()
-            .to_string()
-    }
-
-    fn insert_bool(&mut self, key: &str, value: bool) {
-        self.insert(key.to_string(), ContextType::ValueType(Value::Bool(value)));
-    }
-
-    fn get_bool_or(&self, key: &str, default: bool) -> bool {
-        self.get(key)
-            .unwrap_or(&ContextType::ValueType(Value::Bool(default)))
-            .get_value()
-            .as_bool()
-            .unwrap()
+    fn get_value(&mut self, key: &str) -> Option<&Value> {
+        self.get(key).map(|x| x.get_value())
     }
 
     fn insert_value(&mut self, key: &str, value: Value) {
@@ -145,17 +127,7 @@ impl MapUtil for HashMap<String, ContextType> {
     }
 }
 
-pub trait ContextMapUtil {
-    /// 插入模板类型
-    fn insert_template(&mut self, key: &str, template: &str, attrs: Vec<&str>);
-    fn insert_invoker(
-        &mut self,
-        key: &str,
-        invoker: Box<dyn Fn(&HashMap<String, ContextType>) -> Value>,
-    );
-}
-
-impl ContextMapUtil for HashMap<String, ContextType> {
+impl TemplateContextUtil for HashMap<String, ContextType> {
     fn insert_template(&mut self, key: &str, template: &str, attrs: Vec<&str>) {
         self.insert(
             key.to_string(),
@@ -169,8 +141,9 @@ impl ContextMapUtil for HashMap<String, ContextType> {
     fn insert_invoker(
         &mut self,
         key: &str,
-        invoker: Box<dyn Fn(&HashMap<String, ContextType>) -> Value>,
+        invoker: Box<dyn Fn(&mut HashMap<String, ContextType>) -> Value>,
     ) {
         self.insert(key.to_string(), ContextType::InvokerType(invoker));
     }
 }
+pub type TemplateContext = HashMap<String, ContextType>;

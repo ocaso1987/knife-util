@@ -1,7 +1,7 @@
 //! 字符串处理工具类
 use regex::Regex;
 
-use crate::error::{AppError, ERR_CONVERT};
+use crate::{error::ERR_CONVERT, Result};
 
 /// 字符串工具类
 pub trait StringUtil {
@@ -18,7 +18,7 @@ pub trait StringUtil {
     ///     "no2".str_to_bool().unwrap_err().should_panic("ERR_CONVERT");
     /// }
     /// ```
-    fn str_to_bool(&self) -> Result<bool, AppError>;
+    fn str_to_bool(&self) -> Result<bool>;
 
     /// 根据正则匹配并进行字符替换
     fn replace_pattern_all(&self, pattern: String, replacement: String) -> String;
@@ -28,7 +28,7 @@ pub trait StringUtil {
 }
 
 impl StringUtil for String {
-    fn str_to_bool(&self) -> Result<bool, AppError> {
+    fn str_to_bool(&self) -> Result<bool> {
         return match self.to_lowercase().as_str() {
             "true" => Ok(true),
             "t" => Ok(true),
@@ -57,7 +57,7 @@ impl StringUtil for String {
 }
 
 impl StringUtil for &str {
-    fn str_to_bool(&self) -> Result<bool, AppError> {
+    fn str_to_bool(&self) -> Result<bool> {
         self.to_string().str_to_bool()
     }
 
