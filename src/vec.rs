@@ -1,10 +1,10 @@
-pub trait VecUtil<T> {
+pub trait VecExt<T> {
     fn map<F, R>(&self, fun: F) -> Vec<R>
     where
         F: Fn(&T) -> R;
 }
 
-impl<T> VecUtil<T> for Vec<T> {
+impl<T> VecExt<T> for Vec<T> {
     fn map<F, R>(&self, fun: F) -> Vec<R>
     where
         F: Fn(&T) -> R,

@@ -4,10 +4,10 @@ use std::collections::HashMap;
 
 use serde_json::{Number, Value};
 
-use crate::{cast_u64_to_u16, AnyValue};
+use crate::{cast_u64_to_u16, AnyValue, ContextType};
 
 /// 集合工具类
-pub trait MapUtil {
+pub trait MapExt {
     /// 集合中获取JSON类型
     fn get_value(&mut self, key: &str) -> Option<&Value>;
     /// 集合中插入JSON类型
@@ -17,6 +17,8 @@ pub trait MapUtil {
     fn get_string(&mut self, key: &str) -> String {
         self.get_value(key)
             .expect(format!("{}不能为空", key).as_str())
+            .as_str()
+            .unwrap()
             .to_string()
     }
     /// 集合中插入字符类型
@@ -115,14 +117,14 @@ pub trait MapUtil {
     }
 }
 
-pub trait AnyContextUtil {
+pub trait AnyContextExt {
     fn insert_any<T>(&mut self, key: &str, value: T);
     fn get_ref<T>(&mut self, key: &str) -> &T;
     fn get_mut<T>(&mut self, key: &str) -> &mut T;
     fn get_opt_ref<T>(&mut self, key: &str) -> Option<&T>;
     fn get_opt_mut<T>(&mut self, key: &str) -> Option<&mut T>;
 }
-impl MapUtil for HashMap<String, AnyValue> {
+impl MapExt for HashMap<String, AnyValue> {
     fn get_value(&mut self, key: &str) -> Option<&Value> {
         self.get(key).map(|x| x.as_ref::<Value>())
     }
@@ -131,7 +133,7 @@ impl MapUtil for HashMap<String, AnyValue> {
         self.insert(key.to_string(), AnyValue::new(value));
     }
 }
-impl AnyContextUtil for HashMap<String, AnyValue> {
+impl AnyContextExt for HashMap<String, AnyValue> {
     fn insert_any<T>(&mut self, key: &str, value: T) {
         self.insert(key.to_string(), AnyValue::new(value));
     }
@@ -154,7 +156,7 @@ impl AnyContextUtil for HashMap<String, AnyValue> {
 }
 pub type AnyContext = HashMap<String, AnyValue>;
 
-impl MapUtil for HashMap<String, Value> {
+impl MapExt for HashMap<String, Value> {
     fn get_value(&mut self, key: &str) -> Option<&Value> {
         self.get(key)
     }
@@ -163,3 +165,42 @@ impl MapUtil for HashMap<String, Value> {
         self.insert(key.to_string(), value);
     }
 }
+
+pub trait TemplateContextExt {
+    /// 插入模板类型
+    fn insert_template(&mut self, key: &str, template: &str, attrs: Vec<&str>);
+    fn insert_invoker(
+        &mut self,
+        key: &str,
+        invoker: Box<dyn Fn(&mut HashMap<String, ContextType>) -> Value>,
+    );
+}
+impl MapExt for HashMap<String, ContextType> {
+    fn get_value(&mut self, key: &str) -> Option<&Value> {
+        self.get(key).map(|x| x.get_value())
+    }
+
+    fn insert_value(&mut self, key: &str, value: Value) {
+        self.insert(key.to_string(), ContextType::ValueType(value));
+    }
+}
+impl TemplateContextExt for HashMap<String, ContextType> {
+    fn insert_template(&mut self, key: &str, template: &str, attrs: Vec<&str>) {
+        self.insert(
+            key.to_string(),
+            ContextType::TemplateType {
+                template: template.to_string(),
+                attrs: attrs.iter().map(|x| x.to_string()).collect(),
+            },
+        );
+    }
+
+    fn insert_invoker(
+        &mut self,
+        key: &str,
+        invoker: Box<dyn Fn(&mut HashMap<String, ContextType>) -> Value>,
+    ) {
+        self.insert(key.to_string(), ContextType::InvokerType(invoker));
+    }
+}
+pub type TemplateContext = HashMap<String, ContextType>;

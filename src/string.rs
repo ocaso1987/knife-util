@@ -4,7 +4,7 @@ use regex::Regex;
 use crate::{error::ERR_CONVERT, Result};
 
 /// 字符串工具类
-pub trait StringUtil {
+pub trait StringExt {
     /// 字符串转bool类型
     ///
     /// ```
@@ -27,7 +27,7 @@ pub trait StringUtil {
     fn match_pattern(&self, pattern: String) -> bool;
 }
 
-impl StringUtil for String {
+impl StringExt for String {
     fn str_to_bool(&self) -> Result<bool> {
         return match self.to_lowercase().as_str() {
             "true" => Ok(true),
@@ -56,7 +56,7 @@ impl StringUtil for String {
     }
 }
 
-impl StringUtil for &str {
+impl StringExt for &str {
     fn str_to_bool(&self) -> Result<bool> {
         self.to_string().str_to_bool()
     }

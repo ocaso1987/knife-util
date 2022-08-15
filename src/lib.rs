@@ -38,15 +38,14 @@ pub mod tokio {
 
 pub use any::{AnyRef, AnyValue};
 pub use error::{
-    AppError, Result, ERR_ARGUMENT, ERR_CAST, ERR_CONVERT, ERR_FORMAT, ERR_INTERNAL, ERR_PARSE,
+    AnyError, Result, ERR_ARGUMENT, ERR_CAST, ERR_CONVERT, ERR_DB, ERR_FORMAT, ERR_INTERNAL,
+    ERR_PARSE, ERR_WEB,
 };
 pub use future::{FutureHandler, FutureObj};
-pub use map::{AnyContext, AnyContextUtil, MapUtil};
+pub use map::{AnyContext, AnyContextExt, MapExt, TemplateContext, TemplateContextExt};
 pub use number::{
     cast_i64_to_i16, cast_i64_to_i32, cast_u64_to_u16, cast_u64_to_u32, cast_u64_to_usize,
 };
-pub use string::StringUtil;
-pub use template::{
-    render_template, render_template_recursion, ContextType, TemplateContext, TemplateContextUtil,
-};
-pub use vec::VecUtil;
+pub use string::StringExt;
+pub use template::{render_template, render_template_recursion, ContextType};
+pub use vec::VecExt;

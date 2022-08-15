@@ -11,7 +11,7 @@ use lazy_static::lazy_static;
 use serde::Serialize;
 use serde_json::Value;
 
-use crate::{MapUtil, Result, ERR_ARGUMENT, ERR_FORMAT};
+use crate::{Result, ERR_ARGUMENT, ERR_FORMAT};
 
 lazy_static! {
     static ref GLOBAL_TEMPLATE: Arc<Mutex<Handlebars<'static>>> =
@@ -36,7 +36,7 @@ where
         Ok(v) => Ok(v),
         Err(e) => Err(ERR_FORMAT
             .msg_detail("模板渲染失败".to_string())
-            .trace(e.to_string())),
+            .cause(anyhow::Error::new(e))),
     }
 }
 
@@ -106,44 +106,3 @@ pub fn render_template_recursion(
     }
     render_template(root_template, &param)
 }
-
-pub trait TemplateContextUtil {
-    /// 插入模板类型
-    fn insert_template(&mut self, key: &str, template: &str, attrs: Vec<&str>);
-    fn insert_invoker(
-        &mut self,
-        key: &str,
-        invoker: Box<dyn Fn(&mut HashMap<String, ContextType>) -> Value>,
-    );
-}
-
-impl MapUtil for HashMap<String, ContextType> {
-    fn get_value(&mut self, key: &str) -> Option<&Value> {
-        self.get(key).map(|x| x.get_value())
-    }
-
-    fn insert_value(&mut self, key: &str, value: Value) {
-        self.insert(key.to_string(), ContextType::ValueType(value));
-    }
-}
-
-impl TemplateContextUtil for HashMap<String, ContextType> {
-    fn insert_template(&mut self, key: &str, template: &str, attrs: Vec<&str>) {
-        self.insert(
-            key.to_string(),
-            ContextType::TemplateType {
-                template: template.to_string(),
-                attrs: attrs.iter().map(|x| x.to_string()).collect(),
-            },
-        );
-    }
-
-    fn insert_invoker(
-        &mut self,
-        key: &str,
-        invoker: Box<dyn Fn(&mut HashMap<String, ContextType>) -> Value>,
-    ) {
-        self.insert(key.to_string(), ContextType::InvokerType(invoker));
-    }
-}
-pub type TemplateContext = HashMap<String, ContextType>;
