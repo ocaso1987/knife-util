@@ -4,7 +4,7 @@ edition = "2021"
 license = "Apache-2.0"
 name = "knife-util"
 repository = "https://github.com/ocaso1987/knife-util/"
-version = "0.1.0"
+version = "0.1.1"
 
 [dependencies]
 async-trait = "0.1.57"
