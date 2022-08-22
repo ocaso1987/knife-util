@@ -1,3 +1,4 @@
+/// 列表类型数据操作工具类
 pub trait VecExt<T> {
     fn map<F, R>(&self, fun: F) -> Vec<R>
     where

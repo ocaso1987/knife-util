@@ -2,6 +2,7 @@
 
 use crate::AnyValue;
 use lazy_static::lazy_static;
+use serde_json::json;
 use std::fmt::Display;
 
 /// 异常信息
@@ -64,6 +65,22 @@ impl AnyError {
         target.cause.replace(AnyValue::new(value));
         target
     }
+
+    /// 定义输出到前端的格式
+    pub fn to_json_string(&self) -> String {
+        let cause = self
+            .cause
+            .as_ref()
+            .map(|x| x.as_ref::<anyhow::Error>().to_string());
+        let v = json!( {
+            "name": self.name,
+            "code": self.code,
+            "msg": self.msg,
+            "msg_detail": self.msg_detail,
+            "cause": cause
+        });
+        v.to_string()
+    }
 }
 
 impl std::error::Error for AnyError {
@@ -78,6 +95,7 @@ impl std::error::Error for AnyError {
         &self.msg
     }
 }
+/// 可代替std::result::Result<T, AnyError>操作的工具
 pub type Result<T> = ::std::result::Result<T, AnyError>;
 
 impl From<hyper::Error> for AnyError {
