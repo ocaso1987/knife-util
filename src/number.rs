@@ -19,6 +19,15 @@ pub fn cast_u64_to_u32(n: u64) -> Result<u32> {
     }
 }
 
+/// u64转i64，数据越界则提示错误信息
+pub fn cast_u64_to_i64(n: u64) -> Result<i64> {
+    if n <= i64::max_value() as u64 && n >= i64::min_value() as u64 {
+        Ok(n as i64)
+    } else {
+        Err(ERR_CAST.msg_detail(format!("数据{}不能转换为i64类型", n)))
+    }
+}
+
 /// u64转usize，数据越界则提示错误信息
 pub fn cast_u64_to_usize(n: u64) -> Result<usize> {
     if n <= usize::max_value() as u64 {

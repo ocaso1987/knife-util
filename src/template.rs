@@ -119,6 +119,16 @@ pub trait TemplateContextExt {
         invoker: Box<dyn Fn(&mut HashMap<String, ContextType>) -> Bson>,
     );
 }
+impl ContextExt for HashMap<String, ContextType> {
+    type Context = ContextType;
+    fn get_bson(&mut self, key: &str) -> Option<Bson> {
+        self.get(key).map(|x| x.get_value().clone())
+    }
+
+    fn insert_bson(&mut self, key: &str, value: Bson) {
+        self.insert(key.to_string(), ContextType::ValueType(value));
+    }
+}
 impl TemplateContextExt for HashMap<String, ContextType> {
     fn insert_template(&mut self, key: &str, template: &str, attrs: Vec<&str>) {
         self.insert(
