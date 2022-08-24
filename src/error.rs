@@ -96,7 +96,7 @@ impl std::error::Error for AnyError {
     }
 }
 /// 可代替std::result::Result<T, AnyError>操作的工具
-pub type Result<T> = ::std::result::Result<T, AnyError>;
+pub type Result<T> = std::result::Result<T, AnyError>;
 
 impl From<hyper::Error> for AnyError {
     fn from(err: hyper::Error) -> Self {
@@ -106,6 +106,18 @@ impl From<hyper::Error> for AnyError {
 
 impl From<serde_json::Error> for AnyError {
     fn from(err: serde_json::Error) -> Self {
+        ERR_CONVERT.cause(anyhow::Error::new(err))
+    }
+}
+
+impl From<serde_yaml::Error> for AnyError {
+    fn from(err: serde_yaml::Error) -> Self {
+        ERR_CONVERT.cause(anyhow::Error::new(err))
+    }
+}
+
+impl From<toml::de::Error> for AnyError {
+    fn from(err: toml::de::Error) -> Self {
         ERR_CONVERT.cause(anyhow::Error::new(err))
     }
 }
@@ -121,17 +133,20 @@ lazy_static! {
     /// 全局数据解析异常
     pub static ref ERR_PARSE: AnyError = AnyError::new("ERR_PARSE", "100002", "数据解析出现异常");
 
+    /// 全局数据解析异常
+    pub static ref ERR_MERGE: AnyError = AnyError::new("ERR_MERGE", "100003", "数据进行合并处理出现异常");
+
     /// 全局数据格式化异常
-    pub static ref ERR_FORMAT: AnyError = AnyError::new("ERR_FORMAT", "100003", "数据格式化出现异常");
+    pub static ref ERR_FORMAT: AnyError = AnyError::new("ERR_FORMAT", "100004", "数据格式化出现异常");
 
     /// 请求参数错误
-    pub static ref ERR_ARGUMENT: AnyError = AnyError::new("ERR_ARGUMENT", "100004", "请求参数错误");
+    pub static ref ERR_ARGUMENT: AnyError = AnyError::new("ERR_ARGUMENT", "100005", "请求参数错误");
 
     /// Web处理错误
-    pub static ref ERR_WEB: AnyError = AnyError::new("ERR_WEB", "100005", "Web处理错误");
+    pub static ref ERR_WEB: AnyError = AnyError::new("ERR_WEB", "100006", "Web处理错误");
 
-    /// 数据操作异常
-    pub static ref ERR_DB: AnyError = AnyError::new("ERR_DB", "100006", "数据库操作异常");
+    /// 数据库操作异常
+    pub static ref ERR_DB: AnyError = AnyError::new("ERR_DB", "100007", "数据库操作异常");
 
     /// 全局内部异常
     pub static ref ERR_INTERNAL: AnyError = AnyError::new("ERR_INTERNAL", "999999", "内部异常");

@@ -6,11 +6,12 @@ use std::{
     },
 };
 
+use bson::Bson;
 use handlebars::Handlebars;
 use lazy_static::lazy_static;
 use serde::Serialize;
 
-use crate::{ContextExt, Result, Value, ERR_ARGUMENT, ERR_FORMAT};
+use crate::{ContextExt, Result, ERR_ARGUMENT, ERR_FORMAT};
 
 lazy_static! {
     static ref GLOBAL_TEMPLATE: Arc<Mutex<Handlebars<'static>>> =
@@ -47,13 +48,13 @@ pub enum ContextType {
         attrs: Vec<String>,
     },
     /// 值类型
-    ValueType(Value),
+    ValueType(Bson),
     /// 调用类型
-    InvokerType(Box<dyn Fn(&mut HashMap<String, ContextType>) -> Value>),
+    InvokerType(Box<dyn Fn(&mut HashMap<String, ContextType>) -> Bson>),
 }
 
 impl ContextType {
-    pub fn get_value(&self) -> &Value {
+    pub fn get_value(&self) -> &Bson {
         if let ContextType::ValueType(v) = self {
             v
         } else {
@@ -77,7 +78,7 @@ pub fn render_template_recursion(
     if root_attrs.is_empty() {
         return Ok(root_template.to_string());
     }
-    let mut param = HashMap::<String, Value>::new();
+    let mut param = HashMap::<String, Bson>::new();
     for item_name in root_attrs {
         match context.get(item_name) {
             Some(child_v) => match child_v {
@@ -85,9 +86,9 @@ pub fn render_template_recursion(
                     template: _,
                     attrs: _,
                 } => {
-                    param.insert(
-                        item_name.to_string(),
-                        Value::String(render_template_recursion(context, item_name).unwrap()),
+                    param.insert_string(
+                        item_name.as_str(),
+                        render_template_recursion(context, item_name).unwrap(),
                     );
                 }
                 ContextType::ValueType(v) => {
@@ -115,17 +116,8 @@ pub trait TemplateContextExt {
     fn insert_invoker(
         &mut self,
         key: &str,
-        invoker: Box<dyn Fn(&mut HashMap<String, ContextType>) -> Value>,
+        invoker: Box<dyn Fn(&mut HashMap<String, ContextType>) -> Bson>,
     );
-}
-impl ContextExt for HashMap<String, ContextType> {
-    fn get_value(&mut self, key: &str) -> Option<&Value> {
-        self.get(key).map(|x| x.get_value())
-    }
-
-    fn insert_value(&mut self, key: &str, value: Value) {
-        self.insert(key.to_string(), ContextType::ValueType(value));
-    }
 }
 impl TemplateContextExt for HashMap<String, ContextType> {
     fn insert_template(&mut self, key: &str, template: &str, attrs: Vec<&str>) {
@@ -141,7 +133,7 @@ impl TemplateContextExt for HashMap<String, ContextType> {
     fn insert_invoker(
         &mut self,
         key: &str,
-        invoker: Box<dyn Fn(&mut HashMap<String, ContextType>) -> Value>,
+        invoker: Box<dyn Fn(&mut HashMap<String, ContextType>) -> Bson>,
     ) {
         self.insert(key.to_string(), ContextType::InvokerType(invoker));
     }
