@@ -1,6 +1,6 @@
 [package]
 name = "knife-util"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["ocaso <ocaso1987@qq.com>"]
 description = "Knife框架基础工具包"
 keywords = ["util"]
