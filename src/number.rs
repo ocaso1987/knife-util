@@ -1,6 +1,11 @@
 //! 用于数值计算处理的工具类
 use crate::{error::ERR_CAST, Result};
 
+/// i32转i64
+pub fn cast_i32_to_i64(n: i32) -> Result<i64> {
+    Ok(n as i64)
+}
+
 /// u64转u16，数据越界则提示错误信息
 pub fn cast_u64_to_u16(n: u64) -> Result<u16> {
     if n <= u16::max_value() as u64 {

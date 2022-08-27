@@ -122,6 +122,12 @@ impl From<toml::de::Error> for AnyError {
     }
 }
 
+impl From<sqlx::Error> for AnyError {
+    fn from(err: sqlx::Error) -> Self {
+        ERR_DB.cause(anyhow::Error::new(err))
+    }
+}
+
 lazy_static! {
 
     /// 全局数据格式转换异常

@@ -21,17 +21,20 @@ pub trait StringExt {
     /// ```
     fn str_to_bool(&self) -> Result<bool>;
 
+    /// 当内容为""时设置默认值
+    fn if_blank(&self, default_value: String) -> String;
+
     /// 根据正则匹配并进行字符替换
     fn regex_replace_all(&self, pattern: String, replacement: String) -> String;
 
     /// 检查正则是否匹配
     fn regex_match(&self, pattern: String) -> bool;
-    
+
     /// 检查glob规则是否匹配
     fn glob_match(&self, pattern: String) -> bool;
 }
 
-impl StringExt for String{
+impl StringExt for String {
     fn str_to_bool(&self) -> Result<bool> {
         return match self.to_lowercase().as_str() {
             "true" => Ok(true),
@@ -50,6 +53,14 @@ impl StringExt for String{
         };
     }
 
+    fn if_blank(&self, default_value: String) -> String {
+        if !self.is_empty() {
+            self.clone()
+        } else {
+            default_value
+        }
+    }
+
     fn regex_replace_all(&self, pattern: String, replacement: String) -> String {
         let regex = Regex::new(pattern.as_str()).expect("错误的正则表达式");
         regex.replace_all(self.as_str(), replacement).to_string()
@@ -60,17 +71,24 @@ impl StringExt for String{
     }
 
     fn glob_match(&self, pattern: String) -> bool {
-        Glob::new(pattern.as_str()).unwrap().compile_matcher().is_match(self)
+        Glob::new(pattern.as_str())
+            .unwrap()
+            .compile_matcher()
+            .is_match(self)
     }
 }
-    
-impl StringExt for &str{
+
+impl StringExt for &str {
     fn str_to_bool(&self) -> Result<bool> {
         self.to_string().str_to_bool()
     }
 
+    fn if_blank(&self, default_value: String) -> String {
+        self.to_string().if_blank(default_value)
+    }
+    
     fn regex_replace_all(&self, pattern: String, replacement: String) -> String {
-        self.to_string().regex_replace_all(pattern,replacement)
+        self.to_string().regex_replace_all(pattern, replacement)
     }
 
     fn regex_match(&self, pattern: String) -> bool {

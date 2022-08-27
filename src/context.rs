@@ -1,14 +1,11 @@
-//! 集合工具类
+//! 上下文工具类
 use std::collections::HashMap;
 
 use bson::Bson;
 
 use crate::AnyValue;
 
-/// Map工具类
-pub trait MapExt<K, V> {}
-
-/// 键为字符类型的Map工具类
+/// 键为字符类型的上下文工具类
 pub trait ContextExt {
     type Context;
     /// BSON作为程序一等公民，支持从JSON、YAML、TOML的值向其转化
@@ -115,7 +112,8 @@ impl ContextExt for HashMap<String, Bson> {
     }
 }
 
-/// 键为字符类型且值为AnyValue的Map工具操作类
+/// 键为字符类型且值为AnyValue的上下文操作类
+/// 
 /// 由于当前特征中存储的是非序列化的任意对象，因此此特征中的操作不能与ContextExt中的操作混用
 /// 譬如：
 ///     map.insert_any("a", "abc".to_string());

@@ -1,8 +1,10 @@
+use bson::Bson;
 use indexmap::IndexMap;
 
-use crate::{number::cast_u64_to_i64, Result, VecExt, ERR_MERGE};
+use crate::{cast_i32_to_i64, number::cast_u64_to_i64, Result, VecExt, ERR_MERGE};
 
 /// 可遍历特征
+///
 /// 支持以/a/b/c/2的方式获取指定层级上的对象
 /// 特殊字行可转义采用~1代替/，采用~0代替~
 /// 更多信息可参考：[RFC6901](https://tools.ietf.org/html/rfc6901)
@@ -103,6 +105,7 @@ fn parse_index(s: &str) -> Option<usize> {
 }
 
 /// 支持两个相同的Object对象进行合并
+///
 /// 如果是存放在Json/Yaml/Toml中的数据，合并后将变为基本类型
 pub trait MergeExt {
     type Context;
@@ -160,16 +163,18 @@ mod tests {
     }
 }
 
+/// 支持对象转换为Bson格式
 pub trait BsonConvertExt {
     fn as_bson(&self) -> bson::Bson;
+    fn from_bson(bson: &Bson) -> Self;
 }
 
 impl BsonConvertExt for serde_json::Value {
     fn as_bson(&self) -> bson::Bson {
         match self {
-            handlebars::JsonValue::Null => bson::Bson::Null,
-            handlebars::JsonValue::Bool(v) => bson::Bson::Boolean(v.clone()),
-            handlebars::JsonValue::Number(v) => {
+            serde_json::Value::Null => bson::Bson::Null,
+            serde_json::Value::Bool(v) => bson::Bson::Boolean(v.clone()),
+            serde_json::Value::Number(v) => {
                 if v.is_f64() {
                     return bson::Bson::Double(v.as_f64().unwrap());
                 } else if v.is_i64() {
@@ -180,14 +185,60 @@ impl BsonConvertExt for serde_json::Value {
                     panic!("无法到达的代码");
                 }
             }
-            handlebars::JsonValue::String(v) => bson::Bson::String(v.clone()),
-            handlebars::JsonValue::Array(v) => bson::Bson::Array(v.map(|x| x.as_bson())),
-            handlebars::JsonValue::Object(o) => {
+            serde_json::Value::String(v) => bson::Bson::String(v.clone()),
+            serde_json::Value::Array(v) => bson::Bson::Array(v.map(|x| x.as_bson())),
+            serde_json::Value::Object(o) => {
                 let mut map = IndexMap::new();
                 for (k, v) in o {
                     map.insert(k.to_string(), v.as_bson());
                 }
                 bson::Bson::Document(bson::Document::from_iter(map.into_iter()))
+            }
+        }
+    }
+
+    fn from_bson(bson: &Bson) -> Self {
+        match bson {
+            Bson::Double(v) => {
+                serde_json::Value::Number(serde_json::Number::from_f64(v.clone()).unwrap())
+            }
+            Bson::String(v) => serde_json::Value::String(v.clone()),
+            Bson::Array(v) => serde_json::Value::Array(v.map(|x| Self::from_bson(x))),
+            Bson::Document(o) => {
+                let mut map = serde_json::Map::new();
+                for (k, v) in o {
+                    map.insert(k.to_string(), Self::from_bson(v));
+                }
+                serde_json::Value::Object(map)
+            }
+            Bson::Boolean(v) => serde_json::Value::Bool(v.clone()),
+            Bson::Null => serde_json::Value::Null,
+            Bson::RegularExpression(_) => panic!("暂不支持Bson以RegularExpression类型进行格式转换"),
+            Bson::JavaScriptCode(_) => panic!("暂不支持Bson以JavaScriptCode类型进行格式转换"),
+            Bson::JavaScriptCodeWithScope(_) => {
+                panic!("暂不支持Bson以JavaScriptCodeWithScope类型进行格式转换")
+            }
+            Bson::Int32(v) => serde_json::Value::Number(serde_json::Number::from(
+                cast_i32_to_i64(v.clone()).unwrap(),
+            )),
+            Bson::Int64(v) => serde_json::Value::Number(serde_json::Number::from(v.clone())),
+            Bson::Timestamp(v) => serde_json::Value::String(v.to_string()),
+            Bson::Binary(_) => {
+                panic!("暂不支持Bson以Binary类型进行格式转换")
+            }
+            Bson::ObjectId(v) => serde_json::Value::String(v.to_string()),
+            Bson::DateTime(v) => serde_json::Value::String(v.to_string()),
+            Bson::Symbol(v) => serde_json::Value::String(v.to_string()),
+            Bson::Decimal128(_) => panic!("暂不支持Bson以Decimal128类型进行格式转换"),
+            Bson::Undefined => serde_json::Value::Null,
+            Bson::MaxKey => {
+                panic!("暂不支持Bson以MaxKey类型进行格式转换")
+            }
+            Bson::MinKey => {
+                panic!("暂不支持Bson以MinKey类型进行格式转换")
+            }
+            Bson::DbPointer(_) => {
+                panic!("暂不支持Bson以DbPointer类型进行格式转换")
             }
         }
     }
@@ -214,11 +265,55 @@ impl BsonConvertExt for serde_yaml::Value {
             serde_yaml::Value::Mapping(o) => {
                 let mut map = IndexMap::new();
                 for (k, v) in o {
-                    map.insert(format!("{:?}", k), v.as_bson());
+                    map.insert(k.as_str().unwrap().to_string(), v.as_bson());
                 }
                 bson::Bson::Document(bson::Document::from_iter(map.into_iter()))
             }
             serde_yaml::Value::Tagged(_) => panic!("暂不支持Yaml使用Tag类型"),
+        }
+    }
+
+    fn from_bson(bson: &Bson) -> Self {
+        match bson {
+            Bson::Double(v) => serde_yaml::Value::Number(serde_yaml::Number::from(v.clone())),
+            Bson::String(v) => serde_yaml::Value::String(v.clone()),
+            Bson::Array(v) => serde_yaml::Value::Sequence(v.map(|x| Self::from_bson(x))),
+            Bson::Document(o) => {
+                let mut map = IndexMap::new();
+                for (k, v) in o {
+                    map.insert(serde_yaml::Value::String(k.to_string()), Self::from_bson(v));
+                }
+                serde_yaml::Value::Mapping(serde_yaml::Mapping::from_iter(map.into_iter()))
+            }
+            Bson::Boolean(v) => serde_yaml::Value::Bool(v.clone()),
+            Bson::Null => serde_yaml::Value::Null,
+            Bson::RegularExpression(_) => panic!("暂不支持Bson以RegularExpression类型进行格式转换"),
+            Bson::JavaScriptCode(_) => panic!("暂不支持Bson以JavaScriptCode类型进行格式转换"),
+            Bson::JavaScriptCodeWithScope(_) => {
+                panic!("暂不支持Bson以JavaScriptCodeWithScope类型进行格式转换")
+            }
+            Bson::Int32(v) => serde_yaml::Value::Number(serde_yaml::Number::from(
+                cast_i32_to_i64(v.clone()).unwrap(),
+            )),
+            Bson::Int64(v) => serde_yaml::Value::Number(serde_yaml::Number::from(v.clone())),
+            Bson::Timestamp(v) => serde_yaml::Value::String(v.to_string()),
+            Bson::Binary(_) => {
+                panic!("暂不支持Bson以Binary类型进行格式转换")
+            }
+            Bson::ObjectId(v) => serde_yaml::Value::String(v.to_string()),
+            Bson::DateTime(v) => serde_yaml::Value::String(v.to_string()),
+            Bson::Symbol(v) => serde_yaml::Value::String(v.to_string()),
+            Bson::Decimal128(_) => panic!("暂不支持Bson以Decimal128类型进行格式转换"),
+            Bson::Undefined => serde_yaml::Value::Null,
+            Bson::MaxKey => {
+                panic!("暂不支持Bson以MaxKey类型进行格式转换")
+            }
+            Bson::MinKey => {
+                panic!("暂不支持Bson以MinKey类型进行格式转换")
+            }
+            Bson::DbPointer(_) => {
+                panic!("暂不支持Bson以DbPointer类型进行格式转换")
+            }
         }
     }
 }
@@ -240,6 +335,49 @@ impl BsonConvertExt for toml::Value {
                     map.insert(k.to_string(), v.as_bson());
                 }
                 bson::Bson::Document(bson::Document::from_iter(map.into_iter()))
+            }
+        }
+    }
+
+    fn from_bson(bson: &Bson) -> Self {
+        match bson {
+            Bson::Double(v) => toml::Value::Float(v.clone()),
+
+            Bson::String(v) => toml::Value::String(v.clone()),
+            Bson::Array(v) => toml::Value::Array(v.map(|x| Self::from_bson(x))),
+            Bson::Document(o) => {
+                let mut map = toml::map::Map::new();
+                for (k, v) in o {
+                    map.insert(k.to_string(), Self::from_bson(v));
+                }
+                toml::Value::Table(map)
+            }
+            Bson::Boolean(v) => toml::Value::Boolean(v.clone()),
+            Bson::Null => toml::Value::String("".to_string()),
+            Bson::RegularExpression(_) => panic!("暂不支持Bson以RegularExpression类型进行格式转换"),
+            Bson::JavaScriptCode(_) => panic!("暂不支持Bson以JavaScriptCode类型进行格式转换"),
+            Bson::JavaScriptCodeWithScope(_) => {
+                panic!("暂不支持Bson以JavaScriptCodeWithScope类型进行格式转换")
+            }
+            Bson::Int32(v) => toml::Value::Integer(cast_i32_to_i64(v.clone()).unwrap()),
+            Bson::Int64(v) => toml::Value::Integer(v.clone()),
+            Bson::Timestamp(v) => toml::Value::String(v.to_string()),
+            Bson::Binary(_) => {
+                panic!("暂不支持Bson以Binary类型进行格式转换")
+            }
+            Bson::ObjectId(v) => toml::Value::String(v.to_string()),
+            Bson::DateTime(v) => toml::Value::String(v.to_string()),
+            Bson::Symbol(v) => toml::Value::String(v.to_string()),
+            Bson::Decimal128(_) => panic!("暂不支持Bson以Decimal128类型进行格式转换"),
+            Bson::Undefined => toml::Value::String("".to_string()),
+            Bson::MaxKey => {
+                panic!("暂不支持Bson以MaxKey类型进行格式转换")
+            }
+            Bson::MinKey => {
+                panic!("暂不支持Bson以MinKey类型进行格式转换")
+            }
+            Bson::DbPointer(_) => {
+                panic!("暂不支持Bson以DbPointer类型进行格式转换")
             }
         }
     }
