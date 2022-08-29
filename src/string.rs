@@ -24,6 +24,9 @@ pub trait StringExt {
     /// 当内容为""时设置默认值
     fn if_blank(&self, default_value: String) -> String;
 
+    /// 显示紧凑格式
+    fn compact(&self) -> String;
+
     /// 根据正则匹配并进行字符替换
     fn regex_replace_all(&self, pattern: String, replacement: String) -> String;
 
@@ -61,6 +64,10 @@ impl StringExt for String {
         }
     }
 
+    fn compact(&self) -> String {
+        self.regex_replace_all("[ \t\r\n]+".to_string(), " ".to_string())
+    }
+
     fn regex_replace_all(&self, pattern: String, replacement: String) -> String {
         let regex = Regex::new(pattern.as_str()).expect("错误的正则表达式");
         regex.replace_all(self.as_str(), replacement).to_string()
@@ -86,7 +93,11 @@ impl StringExt for &str {
     fn if_blank(&self, default_value: String) -> String {
         self.to_string().if_blank(default_value)
     }
-    
+
+    fn compact(&self) -> String {
+        self.to_string().compact()
+    }
+
     fn regex_replace_all(&self, pattern: String, replacement: String) -> String {
         self.to_string().regex_replace_all(pattern, replacement)
     }
