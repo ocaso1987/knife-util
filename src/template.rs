@@ -267,8 +267,8 @@ mod tests {
         let res = render_template_recursion(&map, "sql").unwrap();
         println!("{:?}", res.0);
         println!("{:?}", res.1);
-        assert!(res.0.contains(""));
-        assert!(res.1.contains_key(""));
+        assert!(res.0.contains("$0"));
+        assert!(res.1.contains_key("$0"));
     }
 
     #[test]
@@ -283,8 +283,8 @@ mod tests {
         .unwrap();
         println!("{:?}", res.0);
         println!("{:?}", res.1);
-        assert!(res.0.contains(""));
-        assert!(res.1.contains_key(""));
+        assert!(res.0.contains("$0"));
+        assert!(res.1.contains_key("$0"));
     }
 
     #[test]
@@ -302,8 +302,8 @@ mod tests {
         .unwrap();
         println!("{:?}", res.0);
         println!("{:?}", res.1);
-        assert!(res.0.contains(""));
-        assert!(res.1.contains_key(""));
+        assert!(res.0.contains("$0"));
+        assert!(res.1.contains_key("$0"));
     }
 
     #[test]
