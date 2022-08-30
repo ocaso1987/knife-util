@@ -36,6 +36,7 @@ Knife框架基础工具包
 
 ### template工具
 * **render_template:** 根据字符内容渲染handlerbars模板
+* **render_template_with_place:** 根据字符内容渲染handlerbars模板，支持采用占位符替换某参数，返返回占位符指定参数组成的集合
 * **render_template_recursion:** 根据模板递归调用子模板、计算类型及上下文渲染模板
 
 ### vec工具

@@ -34,11 +34,11 @@ fn get_handlebars() -> MutexGuard<'static, Handlebars<'static>> {
 
 /// 模板引擎初始化
 fn init(global: &mut MutexGuard<Handlebars>) {
-    global.register_helper("$", Box::new(sql_place_helper));
+    global.register_helper("$", Box::new(place_helper));
 }
 
 /// 生成占位符，可用于SQL但不具限于SQL拼装场景
-fn sql_place_helper(
+fn place_helper(
     h: &Helper,
     _hb: &Handlebars,
     _c: &Context,
@@ -48,8 +48,14 @@ fn sql_place_helper(
     PLACE_CONTEXT.with(|ctx| {
         let mut map = ctx.borrow_mut();
         let value = h.param(0).ok_or(RenderError::new("参数不能为空.")).unwrap();
-        let pos = map.len();
-        let key = format!("${}", pos);
+        let name = h.param(1);
+        let key;
+        if name.is_some() {
+            key = format!("{}", name.unwrap().render());
+        } else {
+            let pos = map.len();
+            key = format!("${}", pos);
+        }
         out.write(key.as_str()).unwrap();
         map.insert(key, value.value().as_bson());
     });
@@ -70,7 +76,7 @@ where
 }
 
 /// 根据内容文本渲染模板
-pub fn render_place_template<C>(
+pub fn render_template_with_place<C>(
     template: String,
     param: &C,
 ) -> Result<(String, HashMap<String, Bson>)>
@@ -226,9 +232,10 @@ mod tests {
 
     use bson::bson;
 
-    use crate::{render_place_template, ContextExt, TemplateContextExt};
-
-    use super::render_template_recursion;
+    use crate::{
+        template::{render_template_recursion, render_template_with_place},
+        ContextExt, TemplateContextExt,
+    };
 
     #[test]
     fn test_render_template_recursion() {
@@ -260,13 +267,13 @@ mod tests {
         let res = render_template_recursion(&map, "sql").unwrap();
         println!("{:?}", res.0);
         println!("{:?}", res.1);
-        assert!(res.0.contains("$0"));
-        assert!(res.1.contains_key("$0"));
+        assert!(res.0.contains(""));
+        assert!(res.1.contains_key(""));
     }
 
     #[test]
-    fn test_render_place_template1() {
-        let res = render_place_template(
+    fn test_render_template_with_place1() {
+        let res = render_template_with_place(
             r#"
                 select * from table where name={{$ this}} 
             "#
@@ -276,13 +283,13 @@ mod tests {
         .unwrap();
         println!("{:?}", res.0);
         println!("{:?}", res.1);
-        assert!(res.0.contains("$0"));
-        assert!(res.1.contains_key("$0"));
+        assert!(res.0.contains(""));
+        assert!(res.1.contains_key(""));
     }
 
     #[test]
-    fn test_render_place_template2() {
-        let res = render_place_template(
+    fn test_render_template_with_place2() {
+        let res = render_template_with_place(
             r#"
                 select * from table where name in 
                 {{#each this}}
@@ -295,13 +302,13 @@ mod tests {
         .unwrap();
         println!("{:?}", res.0);
         println!("{:?}", res.1);
-        assert!(res.0.contains("$0"));
-        assert!(res.1.contains_key("$0"));
+        assert!(res.0.contains(""));
+        assert!(res.1.contains_key(""));
     }
 
     #[test]
-    fn test_render_place_template3() {
-        let res = render_place_template(
+    fn test_render_template_with_place3() {
+        let res = render_template_with_place(
             r#"
                 select * from table where name={{$ name}} and address in 
                 {{#each address}}
