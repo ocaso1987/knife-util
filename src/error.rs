@@ -37,7 +37,6 @@ impl Display for AnyError {
 }
 
 unsafe impl Sync for AnyError {}
-
 unsafe impl Send for AnyError {}
 
 impl AnyError {

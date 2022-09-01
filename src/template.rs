@@ -7,12 +7,12 @@ use std::{
     },
 };
 
-use bson::Bson;
 use handlebars::{Context, Handlebars, Helper, Output, RenderContext, RenderError};
 use lazy_static::lazy_static;
-use serde::Serialize;
 
-use crate::{BsonConvertExt, ContextExt, Result, StringExt, ERR_ARGUMENT, ERR_FORMAT};
+use crate::{
+    value::value::Value, ContextExt, Result, StringExt, ValueConvertExt, ERR_ARGUMENT, ERR_FORMAT,
+};
 
 lazy_static! {
     static ref GLOBAL_TEMPLATE: Arc<Mutex<Handlebars<'static>>> =
@@ -20,7 +20,7 @@ lazy_static! {
     static ref GLOBAL_TEMPLATE_INITED: AtomicBool = AtomicBool::new(false);
 }
 thread_local! (
-    static PLACE_CONTEXT: RefCell<BTreeMap<String,Bson>> = RefCell::new(BTreeMap::new())
+    static PLACE_CONTEXT: RefCell<BTreeMap<String, Value>> = RefCell::new(BTreeMap::new())
 );
 
 fn get_handlebars() -> MutexGuard<'static, Handlebars<'static>> {
@@ -52,22 +52,19 @@ fn place_helper(
         if name.is_some() {
             let key = format!("{}", name.unwrap().render());
             out.write(key.as_str()).unwrap();
-            map.insert(key, value.value().as_bson());
+            map.insert(key, value.value().as_value());
         } else {
             let pos = map.len();
             let key = format!("${}", pos + 1);
             out.write(key.as_str()).unwrap();
-            map.insert(key, value.value().as_bson());
+            map.insert(key, value.value().as_value());
         }
     });
     Ok(())
 }
 
 /// 根据内容文本渲染模板
-pub fn render_simple_template<C>(template: String, context: &C) -> Result<String>
-where
-    C: Serialize,
-{
+pub fn render_simple_template(template: String, context: &Value) -> Result<String> {
     match get_handlebars().render_template(template.as_str(), context) {
         Ok(v) => Ok(v),
         Err(e) => Err(ERR_FORMAT
@@ -76,31 +73,27 @@ where
     }
 }
 
-pub fn render_sql_template<C>(template: String, param: &C) -> Result<(String, Vec<Bson>)>
-where
-    C: Serialize,
-{
+pub fn render_sql_template(template: String, param: &Value) -> Result<(String, Vec<Value>)> {
     render_template(template, param).map(|(a, b)| (a.compact(), Vec::from_iter(b.into_values())))
 }
 
 /// 根据内容文本渲染模板，并返回占位符集合
-pub fn render_template<C>(template: String, param: &C) -> Result<(String, BTreeMap<String, Bson>)>
-where
-    C: Serialize,
-{
+pub fn render_template(
+    template: String,
+    param: &Value,
+) -> Result<(String, BTreeMap<String, Value>)> {
     let mut map = HashMap::<String, ContextType>::new();
     let key = "$template";
     let mut attrs = vec![];
-    let param_obj = bson::to_bson(param).unwrap();
-    match param_obj {
-        Bson::Document(doc) => {
-            for (k, v) in doc {
-                map.insert(k.to_string(), ContextType::ValueType(v));
+    match param {
+        Value::Object(obj) => {
+            for (k, v) in obj {
+                map.insert(k.to_string(), ContextType::ValueType(v.clone()));
                 attrs.push(k.to_string());
             }
         }
         v => {
-            map.insert("_root".to_string(), ContextType::ValueType(v));
+            map.insert("_root".to_string(), ContextType::ValueType(v.clone()));
         }
     }
     map.insert_template(key, template.as_str(), attrs);
@@ -115,13 +108,13 @@ pub enum ContextType {
         attrs: Vec<String>,
     },
     /// 值类型
-    ValueType(Bson),
+    ValueType(Value),
     /// 调用类型
-    InvokerType(Box<dyn Fn(&mut HashMap<String, ContextType>) -> Bson>),
+    InvokerType(Box<dyn Fn(&mut HashMap<String, ContextType>) -> Value>),
 }
 
 impl ContextType {
-    pub fn get_value(&self) -> &Bson {
+    pub fn get_value(&self) -> &Value {
         if let ContextType::ValueType(v) = self {
             v
         } else {
@@ -134,7 +127,7 @@ impl ContextType {
 pub fn render_template_recursion(
     context: &HashMap<String, ContextType>,
     key: &str,
-) -> Result<(String, BTreeMap<String, Bson>)> {
+) -> Result<(String, BTreeMap<String, Value>)> {
     PLACE_CONTEXT.with(|ctx| ctx.borrow_mut().clear());
     let (root_template, root_attrs) = match context.get(&key.to_string()) {
         Some(v) => match v {
@@ -143,7 +136,7 @@ pub fn render_template_recursion(
         },
         None => return Err(ERR_ARGUMENT.msg_detail(format!("模板定义{}不存在", &key))),
     };
-    let mut param = HashMap::<String, Bson>::new();
+    let mut param = BTreeMap::<String, Value>::new();
     if !root_attrs.is_empty() {
         for item_name in root_attrs {
             match context.get(item_name) {
@@ -180,10 +173,10 @@ pub fn render_template_recursion(
         };
         res = render_simple_template(
             root_template,
-            context_mut.get_bson("_root").as_ref().unwrap(),
+            context_mut.get_value("_root").as_ref().unwrap(),
         );
     } else {
-        res = render_simple_template(root_template, &param);
+        res = render_simple_template(root_template, &Value::Object(param));
     }
     res.map(|x| (x, PLACE_CONTEXT.with(|ctx| ctx.take())))
 }
@@ -196,16 +189,16 @@ pub trait TemplateContextExt {
     fn insert_invoker(
         &mut self,
         key: &str,
-        invoker: Box<dyn Fn(&mut HashMap<String, ContextType>) -> Bson>,
+        invoker: Box<dyn Fn(&mut HashMap<String, ContextType>) -> Value>,
     );
 }
 impl ContextExt for HashMap<String, ContextType> {
     type Context = ContextType;
-    fn get_bson(&mut self, key: &str) -> Option<Bson> {
-        self.get(key).map(|x| x.get_value().clone())
+    fn get_value(&mut self, key: &str) -> Option<&Value> {
+        self.get(key).map(|x| x.get_value())
     }
 
-    fn insert_bson(&mut self, key: &str, value: Bson) {
+    fn insert_value(&mut self, key: &str, value: Value) {
         self.insert(key.to_string(), ContextType::ValueType(value));
     }
 }
@@ -223,7 +216,7 @@ impl TemplateContextExt for HashMap<String, ContextType> {
     fn insert_invoker(
         &mut self,
         key: &str,
-        invoker: Box<dyn Fn(&mut HashMap<String, ContextType>) -> Bson>,
+        invoker: Box<dyn Fn(&mut HashMap<String, ContextType>) -> Value>,
     ) {
         self.insert(key.to_string(), ContextType::InvokerType(invoker));
     }
@@ -235,11 +228,11 @@ pub type TemplateContext = HashMap<String, ContextType>;
 mod tests {
     use std::collections::HashMap;
 
-    use bson::bson;
+    use serde_json::json;
 
     use crate::{
         template::{render_sql_template, render_template, render_template_recursion},
-        ContextExt, TemplateContextExt,
+        ContextExt, TemplateContextExt, ValueConvertExt,
     };
 
     #[test]
@@ -255,9 +248,9 @@ mod tests {
             "#,
             vec!["data".to_string()],
         );
-        map.insert_bson(
+        map.insert_value(
             "data",
-            bson!({
+            json!({
                 "name": "zhangshan",
                 "age": [13, 14],
                 "address": [{
@@ -267,7 +260,8 @@ mod tests {
                     "country": "usa",
                     "city": "newyork",
                 }]
-            }),
+            })
+            .as_value(),
         );
         let res = render_template_recursion(&map, "sql").unwrap();
         println!("{:?}", res.0);
@@ -283,7 +277,7 @@ mod tests {
                 select * from table where name={{$ this}} 
             "#
             .to_string(),
-            &"张三",
+            &json!(["张三"]).as_value(),
         )
         .unwrap();
         println!("{:?}", res.0);
@@ -302,7 +296,7 @@ mod tests {
                 {{/each}}
             "#
             .to_string(),
-            &["张三", "李四"],
+            &json!(["张三", "李四"]).as_value(),
         )
         .unwrap();
         println!("{:?}", res.0);
@@ -321,7 +315,7 @@ mod tests {
                 {{/each}}
             "#
             .to_string(),
-            &bson!({
+            &json!({
                 "name": "zhangshan",
                 "age": [13, 14],
                 "address": [{
@@ -331,7 +325,8 @@ mod tests {
                     "country": "usa",
                     "city": "newyork",
                 }]
-            }),
+            })
+            .as_value(),
         )
         .unwrap();
         println!("{:?}", res.0);
@@ -350,7 +345,7 @@ mod tests {
                 {{/each}} and name={{$ name}}
             "#
             .to_string(),
-            &bson!({
+            &json!({
                 "name": "zhangshan",
                 "age": [13, 14],
                 "address": [{
@@ -360,7 +355,8 @@ mod tests {
                     "country": "usa",
                     "city": "newyork",
                 }]
-            }),
+            })
+            .as_value(),
         )
         .unwrap();
         println!("{:?}", res.0);

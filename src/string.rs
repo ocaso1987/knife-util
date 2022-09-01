@@ -37,9 +37,13 @@ pub trait StringExt {
     fn glob_match(&self, pattern: String) -> bool;
 }
 
-impl StringExt for String {
+impl<T> StringExt for T
+where
+    T: Into<String> + Clone,
+{
     fn str_to_bool(&self) -> Result<bool> {
-        return match self.to_lowercase().as_str() {
+        let str: String = self.clone().into();
+        return match str.to_lowercase().as_str() {
             "true" => Ok(true),
             "t" => Ok(true),
             "false" => Ok(false),
@@ -52,13 +56,14 @@ impl StringExt for String {
             "off" => Ok(false),
             "1" => Ok(true),
             "0" => Ok(false),
-            _ => Err(ERR_CONVERT.msg_detail(format!("字符串[{}]不能转换为bool类型", self))),
+            _ => Err(ERR_CONVERT.msg_detail(format!("字符串[{}]不能转换为bool类型", str))),
         };
     }
 
     fn if_blank(&self, default_value: String) -> String {
-        if !self.is_empty() {
-            self.clone()
+        let str: String = self.clone().into();
+        if !str.is_empty() {
+            str.clone()
         } else {
             default_value
         }
@@ -69,44 +74,21 @@ impl StringExt for String {
     }
 
     fn regex_replace_all(&self, pattern: String, replacement: String) -> String {
+        let str: String = self.clone().into();
         let regex = Regex::new(pattern.as_str()).expect("错误的正则表达式");
-        regex.replace_all(self.as_str(), replacement).to_string()
+        regex.replace_all(str.as_str(), replacement).to_string()
     }
 
     fn regex_match(&self, pattern: String) -> bool {
-        Regex::new(pattern.as_str()).unwrap().is_match(self)
+        let str: String = self.clone().into();
+        Regex::new(pattern.as_str()).unwrap().is_match(str.as_str())
     }
 
     fn glob_match(&self, pattern: String) -> bool {
+        let str: String = self.clone().into();
         Glob::new(pattern.as_str())
             .unwrap()
             .compile_matcher()
-            .is_match(self)
-    }
-}
-
-impl StringExt for &str {
-    fn str_to_bool(&self) -> Result<bool> {
-        self.to_string().str_to_bool()
-    }
-
-    fn if_blank(&self, default_value: String) -> String {
-        self.to_string().if_blank(default_value)
-    }
-
-    fn compact(&self) -> String {
-        self.to_string().compact()
-    }
-
-    fn regex_replace_all(&self, pattern: String, replacement: String) -> String {
-        self.to_string().regex_replace_all(pattern, replacement)
-    }
-
-    fn regex_match(&self, pattern: String) -> bool {
-        self.to_string().regex_match(pattern)
-    }
-
-    fn glob_match(&self, pattern: String) -> bool {
-        self.to_string().glob_match(pattern)
+            .is_match(str)
     }
 }

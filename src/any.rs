@@ -211,7 +211,7 @@ impl AnyValue {
 // assert_ne!(*AnyRef::new(&"1").as_mut::<&str>(), "2");
 /// }
 /// ```
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct AnyRef {
     /// 用于存放实际对象
     pointer: Option<*mut u8>,
@@ -219,6 +219,13 @@ pub struct AnyRef {
     /// 数据类型，用于取出时进行检查
     type_name: String,
 }
+
+impl std::fmt::Debug for AnyRef {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("AnyRef").field(&self.type_name).finish()
+    }
+}
+
 unsafe impl Send for AnyRef {}
 unsafe impl Sync for AnyRef {}
 
