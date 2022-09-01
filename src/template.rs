@@ -1,6 +1,6 @@
 use std::{
     cell::RefCell,
-    collections::HashMap,
+    collections::{BTreeMap, HashMap},
     sync::{
         atomic::{AtomicBool, Ordering},
         Arc, Mutex, MutexGuard,
@@ -12,7 +12,7 @@ use handlebars::{Context, Handlebars, Helper, Output, RenderContext, RenderError
 use lazy_static::lazy_static;
 use serde::Serialize;
 
-use crate::{BsonConvertExt, ContextExt, Result, ERR_ARGUMENT, ERR_FORMAT};
+use crate::{BsonConvertExt, ContextExt, Result, StringExt, ERR_ARGUMENT, ERR_FORMAT};
 
 lazy_static! {
     static ref GLOBAL_TEMPLATE: Arc<Mutex<Handlebars<'static>>> =
@@ -20,7 +20,7 @@ lazy_static! {
     static ref GLOBAL_TEMPLATE_INITED: AtomicBool = AtomicBool::new(false);
 }
 thread_local! (
-    static PLACE_CONTEXT: RefCell<HashMap<String,Bson>> = RefCell::new(HashMap::new())
+    static PLACE_CONTEXT: RefCell<BTreeMap<String,Bson>> = RefCell::new(BTreeMap::new())
 );
 
 fn get_handlebars() -> MutexGuard<'static, Handlebars<'static>> {
@@ -49,21 +49,22 @@ fn place_helper(
         let mut map = ctx.borrow_mut();
         let value = h.param(0).ok_or(RenderError::new("参数不能为空.")).unwrap();
         let name = h.param(1);
-        let key;
         if name.is_some() {
-            key = format!("{}", name.unwrap().render());
+            let key = format!("{}", name.unwrap().render());
+            out.write(key.as_str()).unwrap();
+            map.insert(key, value.value().as_bson());
         } else {
             let pos = map.len();
-            key = format!("${}", pos);
+            let key = format!("${}", pos + 1);
+            out.write(key.as_str()).unwrap();
+            map.insert(key, value.value().as_bson());
         }
-        out.write(key.as_str()).unwrap();
-        map.insert(key, value.value().as_bson());
     });
     Ok(())
 }
 
 /// 根据内容文本渲染模板
-pub fn render_template<C>(template: String, context: &C) -> Result<String>
+pub fn render_simple_template<C>(template: String, context: &C) -> Result<String>
 where
     C: Serialize,
 {
@@ -75,11 +76,15 @@ where
     }
 }
 
-/// 根据内容文本渲染模板
-pub fn render_template_with_place<C>(
-    template: String,
-    param: &C,
-) -> Result<(String, HashMap<String, Bson>)>
+pub fn render_sql_template<C>(template: String, param: &C) -> Result<(String, Vec<Bson>)>
+where
+    C: Serialize,
+{
+    render_template(template, param).map(|(a, b)| (a.compact(), Vec::from_iter(b.into_values())))
+}
+
+/// 根据内容文本渲染模板，并返回占位符集合
+pub fn render_template<C>(template: String, param: &C) -> Result<(String, BTreeMap<String, Bson>)>
 where
     C: Serialize,
 {
@@ -129,7 +134,7 @@ impl ContextType {
 pub fn render_template_recursion(
     context: &HashMap<String, ContextType>,
     key: &str,
-) -> Result<(String, HashMap<String, Bson>)> {
+) -> Result<(String, BTreeMap<String, Bson>)> {
     PLACE_CONTEXT.with(|ctx| ctx.borrow_mut().clear());
     let (root_template, root_attrs) = match context.get(&key.to_string()) {
         Some(v) => match v {
@@ -173,12 +178,12 @@ pub fn render_template_recursion(
             &mut *(context as *const HashMap<String, ContextType>
                 as *mut HashMap<String, ContextType>)
         };
-        res = render_template(
+        res = render_simple_template(
             root_template,
             context_mut.get_bson("_root").as_ref().unwrap(),
         );
     } else {
-        res = render_template(root_template, &param);
+        res = render_simple_template(root_template, &param);
     }
     res.map(|x| (x, PLACE_CONTEXT.with(|ctx| ctx.take())))
 }
@@ -233,7 +238,7 @@ mod tests {
     use bson::bson;
 
     use crate::{
-        template::{render_template_recursion, render_template_with_place},
+        template::{render_sql_template, render_template, render_template_recursion},
         ContextExt, TemplateContextExt,
     };
 
@@ -267,13 +272,13 @@ mod tests {
         let res = render_template_recursion(&map, "sql").unwrap();
         println!("{:?}", res.0);
         println!("{:?}", res.1);
-        assert!(res.0.contains("$0"));
-        assert!(res.1.contains_key("$0"));
+        assert!(res.0.contains("$1"));
+        assert!(res.1.contains_key("$1"));
     }
 
     #[test]
-    fn test_render_template_with_place1() {
-        let res = render_template_with_place(
+    fn test_render_template1() {
+        let res = render_template(
             r#"
                 select * from table where name={{$ this}} 
             "#
@@ -283,13 +288,13 @@ mod tests {
         .unwrap();
         println!("{:?}", res.0);
         println!("{:?}", res.1);
-        assert!(res.0.contains("$0"));
-        assert!(res.1.contains_key("$0"));
+        assert!(res.0.contains("$1"));
+        assert!(res.1.contains_key("$1"));
     }
 
     #[test]
-    fn test_render_template_with_place2() {
-        let res = render_template_with_place(
+    fn test_render_template2() {
+        let res = render_template(
             r#"
                 select * from table where name in 
                 {{#each this}}
@@ -302,13 +307,13 @@ mod tests {
         .unwrap();
         println!("{:?}", res.0);
         println!("{:?}", res.1);
-        assert!(res.0.contains("$0"));
-        assert!(res.1.contains_key("$0"));
+        assert!(res.0.contains("$1"));
+        assert!(res.1.contains_key("$1"));
     }
 
     #[test]
-    fn test_render_template_with_place3() {
-        let res = render_template_with_place(
+    fn test_render_template3() {
+        let res = render_template(
             r#"
                 select * from table where name={{$ name}} and address in 
                 {{#each address}}
@@ -331,7 +336,35 @@ mod tests {
         .unwrap();
         println!("{:?}", res.0);
         println!("{:?}", res.1);
-        assert!(res.0.contains("$0"));
-        assert!(res.1.contains_key("$0"));
+        assert!(res.0.contains("$1"));
+        assert!(res.1.contains_key("$1"));
+    }
+
+    #[test]
+    fn test_render_sql_template() {
+        let res = render_sql_template(
+            r#"
+                select * from table where address in 
+                {{#each address}}
+                    {{$ city}},
+                {{/each}} and name={{$ name}}
+            "#
+            .to_string(),
+            &bson!({
+                "name": "zhangshan",
+                "age": [13, 14],
+                "address": [{
+                    "country": "china",
+                    "city": "shanghai",
+                },{
+                    "country": "usa",
+                    "city": "newyork",
+                }]
+            }),
+        )
+        .unwrap();
+        println!("{:?}", res.0);
+        println!("{:?}", res.1);
+        assert!(res.0.contains("?"));
     }
 }

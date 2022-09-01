@@ -41,7 +41,7 @@ pub use number::{
 };
 pub use string::StringExt;
 pub use template::{
-    render_template_with_place, render_template, render_template_recursion, ContextType,
-    TemplateContext, TemplateContextExt,
+    render_simple_template, render_sql_template, render_template, render_template_recursion,
+    ContextType, TemplateContext, TemplateContextExt,
 };
 pub use vec::VecExt;
