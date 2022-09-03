@@ -7,7 +7,10 @@ use std::{
     },
 };
 
-use handlebars::{Context, Handlebars, Helper, Output, RenderContext, RenderError};
+use handlebars::{
+    Context, Handlebars, Helper, HelperDef, HelperResult, Output, RenderContext, RenderError,
+    Renderable,
+};
 use lazy_static::lazy_static;
 
 use crate::{
@@ -35,6 +38,7 @@ fn get_handlebars() -> MutexGuard<'static, Handlebars<'static>> {
 /// 模板引擎初始化
 fn init(global: &mut MutexGuard<Handlebars>) {
     global.register_helper("$", Box::new(place_helper));
+    global.register_helper("sql_page", Box::new(SqlPageHelper {}));
 }
 
 /// 生成占位符，可用于SQL但不具限于SQL拼装场景
@@ -52,20 +56,74 @@ fn place_helper(
         if name.is_some() {
             let key = format!("{}", name.unwrap().render());
             out.write(key.as_str()).unwrap();
-            map.insert(key, value.value().as_value());
+            map.insert_value(key.as_str(), value.value().as_value());
         } else {
             let pos = map.len();
             let key = format!("${}", pos + 1);
             out.write(key.as_str()).unwrap();
-            map.insert(key, value.value().as_value());
+            map.insert_value(key.as_str(), value.value().as_value());
         }
     });
     Ok(())
 }
 
+/// 生成占位符，可用于SQL但不具限于SQL拼装场景
+#[derive(Clone, Copy)]
+pub struct SqlPageHelper {}
+
+impl HelperDef for SqlPageHelper {
+    fn call<'reg: 'rc, 'rc>(
+        &self,
+        h: &Helper<'reg, 'rc>,
+        r: &'reg Handlebars<'reg>,
+        ctx: &'rc Context,
+        rc: &mut RenderContext<'reg, 'rc>,
+        out: &mut dyn Output,
+    ) -> HelperResult {
+        let context_data = ctx.data().as_object().unwrap();
+        let is_count_sql = context_data.contains_key("_sql_type")
+            && context_data.get("_sql_type").unwrap().as_str().unwrap() == "page_count";
+        let label;
+        let count_label;
+        if h.is_block() {
+            label = h
+                .template()
+                .map(|t| t.renders(r, ctx, rc).unwrap().to_string())
+                .unwrap_or("".to_string());
+            count_label = h
+                .hash_get("count_label")
+                .map(|x| x.value().as_str().unwrap().to_string())
+                .unwrap_or("".to_string());
+        } else {
+            label = h
+                .hash_get("label")
+                .map(|x| x.value().as_str().unwrap().to_string())
+                .unwrap_or("".to_string());
+            count_label = h
+                .hash_get("count_label")
+                .map(|x| x.value().as_str().unwrap().to_string())
+                .unwrap_or("count(*)".to_string());
+        }
+
+        if is_count_sql {
+            out.write(count_label.as_str()).unwrap();
+        } else {
+            out.write(label.as_str()).unwrap();
+        }
+        Ok(())
+    }
+}
+
 /// 根据内容文本渲染模板
-pub fn render_simple_template(template: String, context: &Value) -> Result<String> {
-    match get_handlebars().render_template(template.as_str(), context) {
+pub fn render_simple_template(template: String, value: &Value) -> Result<String> {
+    let param = value.as_object().unwrap();
+    let ctx;
+    if param.contains_key("_root") && param.len() == 1 {
+        ctx = handlebars::Context::wraps(value).unwrap();
+    } else {
+        ctx = handlebars::Context::wraps(param).unwrap();
+    }
+    match get_handlebars().render_template_with_context(template.as_str(), &ctx) {
         Ok(v) => Ok(v),
         Err(e) => Err(ERR_FORMAT
             .msg_detail("模板渲染失败".to_string())
@@ -88,12 +146,12 @@ pub fn render_template(
     match param {
         Value::Object(obj) => {
             for (k, v) in obj {
-                map.insert(k.to_string(), ContextType::ValueType(v.clone()));
+                map.insert_value(k.as_str(), v.clone());
                 attrs.push(k.to_string());
             }
         }
         v => {
-            map.insert("_root".to_string(), ContextType::ValueType(v.clone()));
+            map.insert_value("_root", v.clone());
         }
     }
     map.insert_template(key, template.as_str(), attrs);
@@ -113,6 +171,20 @@ pub enum ContextType {
     InvokerType(Box<dyn Fn(&mut HashMap<String, ContextType>) -> Value>),
 }
 
+impl std::fmt::Debug for ContextType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::TemplateType { template, attrs } => f
+                .debug_struct("TemplateType")
+                .field("template", template)
+                .field("attrs", attrs)
+                .finish(),
+            Self::ValueType(arg0) => f.debug_tuple("ValueType").field(arg0).finish(),
+            Self::InvokerType(_) => f.debug_tuple("InvokerType").finish(),
+        }
+    }
+}
+
 impl ContextType {
     pub fn get_value(&self) -> &Value {
         if let ContextType::ValueType(v) = self {
@@ -128,13 +200,27 @@ pub fn render_template_recursion(
     context: &HashMap<String, ContextType>,
     key: &str,
 ) -> Result<(String, BTreeMap<String, Value>)> {
-    PLACE_CONTEXT.with(|ctx| ctx.borrow_mut().clear());
+    PLACE_CONTEXT.with(|ctx| {
+        ctx.borrow_mut().clear();
+        let res = render_template_recursion_inner(context, key);
+        ctx.borrow_mut().clear();
+        res
+    })
+}
+
+fn render_template_recursion_inner(
+    context: &HashMap<String, ContextType>,
+    key: &str,
+) -> Result<(String, BTreeMap<String, Value>)> {
     let (root_template, root_attrs) = match context.get(&key.to_string()) {
         Some(v) => match v {
             ContextType::TemplateType { template, attrs } => (template.clone(), attrs),
-            _ => return Err(ERR_ARGUMENT.msg_detail(format!("{}不是模板类型", &key))),
+            _ => return Err(ERR_ARGUMENT.msg_detail(format!("{}不是ContextType类型", &key))),
         },
         None => return Err(ERR_ARGUMENT.msg_detail(format!("模板定义{}不存在", &key))),
+    };
+    let context_mut = unsafe {
+        &mut *(context as *const HashMap<String, ContextType> as *mut HashMap<String, ContextType>)
     };
     let mut param = BTreeMap::<String, Value>::new();
     if !root_attrs.is_empty() {
@@ -147,38 +233,30 @@ pub fn render_template_recursion(
                     } => {
                         param.insert_string(
                             item_name.as_str(),
-                            render_template_recursion(context, item_name).unwrap().0,
+                            render_template_recursion_inner(context, item_name)
+                                .unwrap()
+                                .0,
                         );
                     }
                     ContextType::ValueType(v) => {
-                        param.insert(item_name.to_string(), v.clone());
+                        param.insert_value(item_name, v.clone());
                     }
                     ContextType::InvokerType(it) => {
-                        let context_mut = unsafe {
-                            &mut *(context as *const HashMap<String, ContextType>
-                                as *mut HashMap<String, ContextType>)
-                        };
-                        param.insert(item_name.to_string(), it.as_ref()(context_mut));
+                        param.insert_value(item_name, it.as_ref()(context_mut));
                     }
                 },
                 None => return Err(ERR_ARGUMENT.msg_detail(format!("模板定义{}不存在", item_name))),
             };
         }
     }
-    let res;
     if context.contains_key("_root") {
-        let context_mut = unsafe {
-            &mut *(context as *const HashMap<String, ContextType>
-                as *mut HashMap<String, ContextType>)
-        };
-        res = render_simple_template(
-            root_template,
-            context_mut.get_value("_root").as_ref().unwrap(),
+        param.insert(
+            "_root".to_string(),
+            context_mut.get_value("_root").unwrap().clone(),
         );
-    } else {
-        res = render_simple_template(root_template, &Value::Object(param));
     }
-    res.map(|x| (x, PLACE_CONTEXT.with(|ctx| ctx.take())))
+    let res = render_simple_template(root_template, &Value::Object(param));
+    res.map(|x| (x, PLACE_CONTEXT.with(|ctx| ctx.borrow().clone())))
 }
 
 /// 键为字符类型且值为ContextType的Map工具操作类，主要用于模板生成
@@ -361,6 +439,6 @@ mod tests {
         .unwrap();
         println!("{:?}", res.0);
         println!("{:?}", res.1);
-        assert!(res.0.contains("?"));
+        assert!(res.0.contains("$1"));
     }
 }

@@ -74,6 +74,28 @@ pub trait ContextExt {
         }
     }
 
+    /// 集合类中取出u64类型
+    fn get_u64(&mut self, key: &str) -> u64 {
+        self.get_value(key)
+            .expect(format!("{}不能为空", key).as_str())
+            .as_u64()
+            .unwrap()
+    }
+    /// 集合中插入u64类型
+    fn insert_u64(&mut self, key: &str, value: u64) {
+        self.insert_value(key, Value::U64(value))
+    }
+    /// 集合类中取出i64类型
+    fn get_opt_u64(&mut self, key: &str) -> Option<u64> {
+        self.get_value(key).map(|x| x.as_u64().unwrap())
+    }
+    /// 集合中插入u64类型
+    fn insert_opt_u64(&mut self, key: &str, value: Option<u64>) {
+        if let Some(v) = value {
+            self.insert_value(key, Value::U64(v))
+        }
+    }
+
     /// 集合类中取出f64类型
     fn get_f64(&mut self, key: &str) -> f64 {
         let value = self

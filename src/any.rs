@@ -2,6 +2,7 @@
 use std::{
     alloc::{alloc_zeroed, Layout},
     any::type_name,
+    fmt::Display,
     mem::MaybeUninit,
     ptr::{read, read_volatile, write, write_volatile},
 };
@@ -39,60 +40,75 @@ pub struct AnyValue {
     is_taken: bool,
 }
 
+impl Display for AnyValue {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("AnyValue").field(&self.type_name).finish()
+    }
+}
+
 impl std::fmt::Debug for AnyValue {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_tuple("AnyValue").field(&self.type_name).finish()
     }
 }
+
 unsafe impl Send for AnyValue {}
 unsafe impl Sync for AnyValue {}
 
 impl AnyValue {
     /// 初始化一个不包含对象指针的空对象，用于点位
-    pub fn new_zero<V>() -> Self {
-        let type_name = type_name::<V>().to_string();
+    pub fn new_zero() -> Self {
         AnyValue {
             pointer: None,
-            type_name,
+            type_name: "".to_string(),
             is_taken: false,
         }
     }
-
     /// 存入数据，需指定数据类型V
     pub fn new<V>(v: V) -> Self {
-        let mut res = Self::new_zero::<V>();
+        let res = Self::new_zero();
         res.replace(v);
         res
     }
 
     /// 存入数据，需指定数据类型V
     pub fn new_volatile<V>(v: V) -> Self {
-        let mut res = Self::new_zero::<V>();
+        let res = Self::new_zero();
         res.replace_volatile(v);
         res
     }
 
+    /// 检查指针是否绑定数据
+    pub fn is_empty(&self) -> bool {
+        self.pointer.is_none()
+    }
+
     /// 替换数据，需指定数据类型V
-    pub fn replace<V>(&mut self, v: V) {
+    pub fn replace<V>(&self, v: V) {
+        self.check_type::<V>();
         self.replace_with_write(v, |dst, src| unsafe { write(dst, src) })
     }
 
     /// 替换数据，需指定数据类型V
-    pub fn replace_volatile<V>(&mut self, v: V) {
+    pub fn replace_volatile<V>(&self, v: V) {
+        self.check_type::<V>();
         self.replace_with_write(v, |dst, src| unsafe { write_volatile(dst, src) })
     }
 
     /// 替换数据，需指定数据类型V
-    pub fn replace_with_write<V, F>(&mut self, v: V, f: F)
+    pub fn replace_with_write<V, F>(&self, v: V, f: F)
     where
         F: Fn(*mut V, V),
     {
-        self.check_type::<V>();
         let layout = Layout::new::<MaybeUninit<V>>();
         let pointer = unsafe { alloc_zeroed(layout) };
         f(pointer.cast::<V>(), v);
-        self.pointer.replace(pointer);
-        self.is_taken = false;
+        unsafe {
+            let ptr = &mut *(self as *const Self as *mut Self);
+            ptr.type_name = type_name::<V>().to_string();
+            ptr.pointer = Some(pointer);
+            ptr.is_taken = false;
+        }
     }
 
     /// 取出可变数据引用，可采用继承类型的特征，不需要与原始类型完全一致
@@ -113,11 +129,17 @@ impl AnyValue {
 
     /// 取出数据，只能执行一次
     pub fn take<V>(&self) -> V {
+        self.check_taken();
+        self.check_type::<V>();
+        self.check_none();
         self.take_with_read(|src| unsafe { read(src) })
     }
 
     /// 取出数据，只能执行一次
     pub fn take_volatile<V>(&self) -> V {
+        self.check_taken();
+        self.check_type::<V>();
+        self.check_none();
         self.take_with_read(|src| unsafe { read_volatile(src) })
     }
 
@@ -138,34 +160,9 @@ impl AnyValue {
     where
         F: Fn(*const V) -> V,
     {
-        self.check_taken();
-        self.check_type::<V>();
-        self.check_none();
         let ptr = self.pointer.unwrap() as *const V;
         let v = f(ptr);
         unsafe { &mut *(self as *const AnyValue as *mut AnyValue) }.is_taken = true;
-        v
-    }
-
-    /// 强制取出数据且不改变计数
-    pub fn take_force<V>(&self) -> V {
-        self.take_force_with_read(|src| unsafe { read(src) })
-    }
-
-    /// 强制取出数据且不改变计数
-    pub fn take_force_volatile<V>(&self) -> V {
-        self.take_force_with_read(|src| unsafe { read_volatile(src) })
-    }
-
-    /// 强制取出数据且不改变计数
-    pub fn take_force_with_read<V, F>(&self, f: F) -> V
-    where
-        F: Fn(*const V) -> V,
-    {
-        self.check_type::<V>();
-        self.check_none();
-        let ptr = self.pointer.unwrap() as *const V;
-        let v = f(ptr);
         v
     }
 
@@ -175,6 +172,9 @@ impl AnyValue {
     }
 
     fn check_type<V>(&self) {
+        if self.type_name.is_empty() {
+            return;
+        }
         let type_name = type_name::<V>();
         if type_name != self.type_name {
             panic!("类型不一致，期望:{},实际:{}", type_name, self.type_name);
@@ -231,17 +231,16 @@ unsafe impl Sync for AnyRef {}
 
 impl AnyRef {
     /// 初始化一个不包含对象指针的空对象，用于点位
-    pub fn new_zero<V>() -> Self {
-        let type_name = type_name::<V>().to_string();
+    pub fn new_zero() -> Self {
         AnyRef {
             pointer: None,
-            type_name,
+            type_name: "".to_string(),
         }
     }
 
     /// 存入数据，需指定数据类型V
     pub fn new<V>(v: &V) -> Self {
-        let mut res = Self::new_zero::<V>();
+        let mut res = Self::new_zero();
         res.replace(v);
         res
     }
@@ -249,6 +248,7 @@ impl AnyRef {
     /// 存入数据，需指定数据类型V
     pub fn replace<V>(&mut self, v: &V) {
         self.check_type::<V>();
+        self.type_name = type_name::<V>().to_string();
         let pointer = v as *const V as *mut V as *mut u8;
         self.pointer.replace(pointer);
     }
@@ -273,6 +273,9 @@ impl AnyRef {
     }
 
     fn check_type<V>(&self) {
+        if self.type_name.is_empty() {
+            return;
+        }
         let type_name = type_name::<V>();
         if type_name != self.type_name {
             panic!("类型不一致，期望:{},实际:{}", type_name, self.type_name);
