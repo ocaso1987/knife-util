@@ -2,6 +2,7 @@
 use std::{
     alloc::{alloc_zeroed, Layout},
     any::type_name,
+    fmt::Display,
     mem::MaybeUninit,
     ptr::{read, read_volatile, write, write_volatile},
 };
@@ -30,7 +31,7 @@ use std::{
 #[derive(Clone)]
 pub struct AnyValue {
     /// 用于存放实际对象
-    pointer: *mut u8,
+    pointer: Option<*mut u8>,
 
     /// 数据类型，用于取出时进行检查
     type_name: String,
@@ -39,58 +40,106 @@ pub struct AnyValue {
     is_taken: bool,
 }
 
+impl Display for AnyValue {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("AnyValue").field(&self.type_name).finish()
+    }
+}
+
 impl std::fmt::Debug for AnyValue {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_tuple("AnyValue").field(&self.type_name).finish()
     }
 }
+
 unsafe impl Send for AnyValue {}
 unsafe impl Sync for AnyValue {}
 
 impl AnyValue {
+    /// 初始化一个不包含对象指针的空对象，用于点位
+    pub fn new_zero() -> Self {
+        AnyValue {
+            pointer: None,
+            type_name: "".to_string(),
+            is_taken: false,
+        }
+    }
     /// 存入数据，需指定数据类型V
     pub fn new<V>(v: V) -> Self {
-        Self::new_with_write(v, |dst, src| unsafe { write(dst, src) })
+        let res = Self::new_zero();
+        res.replace(v);
+        res
     }
 
     /// 存入数据，需指定数据类型V
     pub fn new_volatile<V>(v: V) -> Self {
-        Self::new_with_write(v, |dst, src| unsafe { write_volatile(dst, src) })
+        let res = Self::new_zero();
+        res.replace_volatile(v);
+        res
     }
 
-    /// 存入数据，需指定数据类型V
-    pub fn new_with_write<V, F>(v: V, f: F) -> Self
+    /// 检查指针是否绑定数据
+    pub fn is_empty(&self) -> bool {
+        self.pointer.is_none()
+    }
+
+    /// 替换数据，需指定数据类型V
+    pub fn replace<V>(&self, v: V) {
+        self.check_type::<V>();
+        self.replace_with_write(v, |dst, src| unsafe { write(dst, src) })
+    }
+
+    /// 替换数据，需指定数据类型V
+    pub fn replace_volatile<V>(&self, v: V) {
+        self.check_type::<V>();
+        self.replace_with_write(v, |dst, src| unsafe { write_volatile(dst, src) })
+    }
+
+    /// 替换数据，需指定数据类型V
+    pub fn replace_with_write<V, F>(&self, v: V, f: F)
     where
         F: Fn(*mut V, V),
     {
-        let type_name = type_name::<V>().to_string();
         let layout = Layout::new::<MaybeUninit<V>>();
         let pointer = unsafe { alloc_zeroed(layout) };
         f(pointer.cast::<V>(), v);
-        AnyValue {
-            pointer,
-            type_name,
-            is_taken: false,
+        unsafe {
+            let ptr = &mut *(self as *const Self as *mut Self);
+            ptr.type_name = type_name::<V>().to_string();
+            ptr.pointer = Some(pointer);
+            ptr.is_taken = false;
         }
     }
 
     /// 取出可变数据引用，可采用继承类型的特征，不需要与原始类型完全一致
     pub fn as_mut<V>(&self) -> &mut V {
-        unsafe { &mut *(self.pointer as *const V as *mut V) }
+        self.check_taken();
+        self.check_type::<V>();
+        self.check_none();
+        unsafe { &mut *(self.pointer.unwrap() as *const V as *mut V) }
     }
 
     /// 取出数据引用，可采用继承类型的特征，不需要与原始类型完全一致
     pub fn as_ref<V>(&self) -> &V {
-        unsafe { &*(self.pointer as *const V as *mut V) }
+        self.check_taken();
+        self.check_type::<V>();
+        self.check_none();
+        unsafe { &*(self.pointer.unwrap() as *const V as *mut V) }
     }
 
     /// 取出数据，只能执行一次
     pub fn take<V>(&self) -> V {
+        self.check_taken();
+        self.check_type::<V>();
+        self.check_none();
         self.take_with_read(|src| unsafe { read(src) })
     }
 
     /// 取出数据，只能执行一次
     pub fn take_volatile<V>(&self) -> V {
+        self.check_taken();
+        self.check_type::<V>();
+        self.check_none();
         self.take_with_read(|src| unsafe { read_volatile(src) })
     }
 
@@ -111,14 +160,7 @@ impl AnyValue {
     where
         F: Fn(*const V) -> V,
     {
-        if self.is_taken {
-            panic!("该值已取出:{}", self.type_name);
-        }
-        let type_name = type_name::<V>();
-        if type_name != self.type_name {
-            panic!("类型不一致，期望:{},实际:{}", type_name, self.type_name);
-        }
-        let ptr = self.pointer as *const V;
+        let ptr = self.pointer.unwrap() as *const V;
         let v = f(ptr);
         unsafe { &mut *(self as *const AnyValue as *mut AnyValue) }.is_taken = true;
         v
@@ -126,19 +168,28 @@ impl AnyValue {
 
     /// 取出字符数据，如果存入数据不是字符类型将抛出异常
     pub fn get_string(&self) -> String {
-        let type_name = type_name::<String>();
-        if type_name != self.type_name {
-            panic!("类型不一致，期望:{},实际:{}", type_name, self.type_name);
-        }
         self.as_ref::<String>().to_string()
     }
 
-    /// 取出字符数据，如果存入数据不是字符类型尝试进行转换
-    pub fn as_string(&self) -> String {
-        if self.type_name == "XXX" {
-            panic!("xxx");
-        } else {
-            panic!("类型无法转换为字符串，实际:{}", self.type_name);
+    fn check_type<V>(&self) {
+        if self.type_name.is_empty() {
+            return;
+        }
+        let type_name = type_name::<V>();
+        if type_name != self.type_name {
+            panic!("类型不一致，期望:{},实际:{}", type_name, self.type_name);
+        }
+    }
+
+    fn check_taken(&self) {
+        if self.is_taken {
+            panic!("该值已取出:{}", self.type_name);
+        }
+    }
+
+    fn check_none(&self) {
+        if self.pointer.is_none() {
+            panic!("数据为空:{}", self.type_name);
         }
     }
 }
@@ -160,50 +211,80 @@ impl AnyValue {
 // assert_ne!(*AnyRef::new(&"1").as_mut::<&str>(), "2");
 /// }
 /// ```
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct AnyRef {
     /// 用于存放实际对象
-    pointer: *mut u8,
+    pointer: Option<*mut u8>,
 
     /// 数据类型，用于取出时进行检查
     type_name: String,
 }
+
+impl std::fmt::Debug for AnyRef {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("AnyRef").field(&self.type_name).finish()
+    }
+}
+
 unsafe impl Send for AnyRef {}
 unsafe impl Sync for AnyRef {}
 
 impl AnyRef {
+    /// 初始化一个不包含对象指针的空对象，用于点位
+    pub fn new_zero() -> Self {
+        AnyRef {
+            pointer: None,
+            type_name: "".to_string(),
+        }
+    }
+
     /// 存入数据，需指定数据类型V
     pub fn new<V>(v: &V) -> Self {
-        let type_name = type_name::<V>().to_string();
+        let mut res = Self::new_zero();
+        res.replace(v);
+        res
+    }
+
+    /// 存入数据，需指定数据类型V
+    pub fn replace<V>(&mut self, v: &V) {
+        self.check_type::<V>();
+        self.type_name = type_name::<V>().to_string();
         let pointer = v as *const V as *mut V as *mut u8;
-        AnyRef { pointer, type_name }
+        self.pointer.replace(pointer);
     }
 
     /// 取出可变数据引用，可采用继承类型的特征，不需要与原始类型完全一致
     pub fn as_mut<V>(&self) -> &mut V {
-        unsafe { &mut *(self.pointer as *const V as *mut V) }
+        self.check_type::<V>();
+        self.check_none();
+        unsafe { &mut *(self.pointer.unwrap() as *const V as *mut V) }
     }
 
     /// 取出数据引用，可采用继承类型的特征，不需要与原始类型完全一致
     pub fn as_ref<V>(&self) -> &V {
-        unsafe { &*(self.pointer as *const V as *mut V) }
+        self.check_type::<V>();
+        self.check_none();
+        unsafe { &*(self.pointer.unwrap() as *const V as *mut V) }
     }
 
     /// 取出字符数据，如果存入数据不是字符类型将抛出异常
     pub fn get_string(&self) -> String {
-        let type_name = type_name::<String>();
-        if type_name != self.type_name {
-            panic!("类型不一致，期望:{},实际:{}", type_name, self.type_name);
-        }
         self.as_ref::<String>().to_string()
     }
 
-    /// 取出字符数据，如果存入数据不是字符类型尝试进行转换
-    pub fn as_string(&self) -> String {
-        if self.type_name == "XXX" {
-            panic!("xxx");
-        } else {
-            panic!("类型无法转换为字符串，实际:{}", self.type_name);
+    fn check_type<V>(&self) {
+        if self.type_name.is_empty() {
+            return;
+        }
+        let type_name = type_name::<V>();
+        if type_name != self.type_name {
+            panic!("类型不一致，期望:{},实际:{}", type_name, self.type_name);
+        }
+    }
+
+    fn check_none(&self) {
+        if self.pointer.is_none() {
+            panic!("数据为空:{}", self.type_name);
         }
     }
 }
