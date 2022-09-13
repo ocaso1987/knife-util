@@ -1,24 +1,11 @@
-//! 字符串处理工具类
 use globset::Glob;
 use regex::Regex;
 
 use crate::{error::ERR_CONVERT, Result};
 
-/// 字符串工具类
+/// 用于字符串处理的工具类
 pub trait StringExt {
     /// 字符串转bool类型
-    ///
-    /// ```
-    /// #[test]
-    /// fn test_str_to_bool() {
-    ///     assert_eq!("true".str_to_bool().unwrap(), true);
-    ///     assert_eq!("FALSE".str_to_bool().unwrap(), false);
-    ///     assert_eq!(str_to_bool("on".to_string()).unwrap(), true);
-    ///     assert_eq!("yes".str_to_bool().unwrap(), true);
-    ///     assert_eq!("no".to_string().str_to_bool().unwrap(), false);
-    ///     "no2".str_to_bool().unwrap_err().should_panic("ERR_CONVERT");
-    /// }
-    /// ```
     fn str_to_bool(&self) -> Result<bool>;
 
     /// 当内容为""时设置默认值
@@ -35,6 +22,9 @@ pub trait StringExt {
 
     /// 检查glob规则是否匹配
     fn glob_match(&self, pattern: String) -> bool;
+
+    /// 检查是否包含指定字符串，且忽略其大小写
+    fn contains_ignore_case(&self, pat: String) -> bool;
 }
 
 impl<T> StringExt for T
@@ -90,5 +80,24 @@ where
             .unwrap()
             .compile_matcher()
             .is_match(str)
+    }
+
+    fn contains_ignore_case(&self, pat: String) -> bool {
+        let str: String = self.clone().into();
+        str.to_lowercase().contains(&pat.to_lowercase())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::types::StringExt;
+
+    #[test]
+    fn test() {
+        assert_eq!("true".str_to_bool().unwrap(), true);
+        assert_eq!("FALSE".str_to_bool().unwrap(), false);
+        assert_eq!("on".to_string().str_to_bool().unwrap(), true);
+        assert_eq!("yes".str_to_bool().unwrap(), true);
+        assert_eq!("no".to_string().str_to_bool().unwrap(), false);
     }
 }

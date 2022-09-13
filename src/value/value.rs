@@ -1,15 +1,16 @@
-//! 用于处理程序内置对象的工具
-//!
-//! 并负责对Json、Yaml、Toml等格式的对象进行处理及转换
-//! 注意的是内置对象没有固定格式，不支持反序列化操作
-//! 如有该操作需求，需通过配合文件方式进行序列化/反序列化操作后进行数据合并
-
 use std::collections::BTreeMap;
 
-use serde::Serialize;
+use crate::{
+    error::ERR_CAST,
+    types::{DoubleCastExt, IntegerCastExt},
+    Result,
+};
 
-use crate::{DoubleCastTrait, IntegerCastTrait, Result, ERR_CAST};
-
+/// 用于处理程序内置对象的工具
+///
+/// 并负责对Json、Yaml、Toml等格式的对象进行处理及转换
+/// 注意的是内置对象不支持反序列化操作
+/// 如有该操作需求，需通过配置文件方式进行序列化/反序列化操作后进行数据合并
 #[derive(Clone, Debug)]
 pub enum Value {
     Null,
@@ -24,28 +25,6 @@ pub enum Value {
     String(String),
     Array(Vec<Value>),
     Object(BTreeMap<String, Value>),
-}
-
-impl Serialize for Value {
-    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        match self {
-            Value::Null => serializer.serialize_unit(),
-            Value::Bool(v) => v.serialize(serializer),
-            Value::I32(v) => v.serialize(serializer),
-            Value::I64(v) => v.serialize(serializer),
-            Value::U32(v) => v.serialize(serializer),
-            Value::U64(v) => v.serialize(serializer),
-            Value::F32(v) => v.serialize(serializer),
-            Value::F64(v) => v.serialize(serializer),
-            Value::String(v) => v.serialize(serializer),
-            Value::Binary(v) => v.serialize(serializer),
-            Value::Array(v) => v.serialize(serializer),
-            Value::Object(v) => v.serialize(serializer),
-        }
-    }
 }
 
 impl Value {
