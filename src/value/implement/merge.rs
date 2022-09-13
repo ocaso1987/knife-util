@@ -1,12 +1,10 @@
-use crate::{Result, Value, ERR_MERGE};
+use crate::{
+    error::ERR_MERGE,
+    value::{traits::MergeExt, Value},
+    Result,
+};
 
-/// 支持两个相同的Object对象进行合并
-pub trait ValueMergeExt {
-    type Context;
-    fn merge<'a>(&'a mut self, target: &'a Self) -> Result<Self::Context>;
-}
-
-impl ValueMergeExt for Value {
+impl MergeExt for Value {
     type Context = Value;
     fn merge<'a>(&'a mut self, target: &'a Self) -> Result<Self::Context> {
         match self {
@@ -41,7 +39,7 @@ impl ValueMergeExt for Value {
     }
 }
 
-impl ValueMergeExt for bson::Bson {
+impl MergeExt for bson::Bson {
     type Context = bson::Bson;
     fn merge<'a>(&'a mut self, target: &'a Self) -> Result<Self::Context> {
         match self {
@@ -73,19 +71,5 @@ impl ValueMergeExt for bson::Bson {
             },
             _ => Ok(target.clone()),
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::{ValueMergeExt, ValuePointerExt};
-    use bson::bson;
-
-    #[test]
-    fn test() {
-        let mut a = bson!({"a":[1,2],"b":3,"e":{"f":"456","h":23}});
-        let b = bson!({"a":[3],"d":4,"e":{"f":"123","g":4}});
-        let res = a.merge(&b).unwrap();
-        assert_eq!(res.p("/e/f").unwrap().as_str().unwrap(), "123");
     }
 }

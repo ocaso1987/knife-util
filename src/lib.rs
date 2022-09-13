@@ -1,27 +1,19 @@
 //! 通用工具类
-pub(crate) mod any;
-pub(crate) mod context;
-pub(crate) mod error;
-pub(crate) mod future;
-pub(crate) mod number;
-pub(crate) mod string;
-pub(crate) mod template;
-pub(crate) mod vec;
-
-pub(crate) mod value {
-    pub(crate) mod convert;
-    pub(crate) mod merge;
-    pub(crate) mod pointer;
-    pub(crate) mod value;
-}
+pub mod any;
+pub mod context;
+pub mod error;
+pub mod page;
+pub mod template;
+pub mod types;
+pub mod value;
 
 /// Reexport
 pub mod crates {
-    pub use anyhow;
     pub use async_trait;
     pub use bson;
     pub use chrono;
     pub use ctor;
+    pub use futures;
     pub use hyper;
     pub use lazy_static;
     pub use opentelemetry_jaeger;
@@ -36,20 +28,11 @@ pub mod crates {
     pub use tracing_subscriber;
 }
 
-pub use any::{AnyRef, AnyValue};
-pub use context::{AnyContext, AnyContextExt, ContextExt};
-pub use error::{
-    AnyError, Ok, Result, ERR_ARGUMENT, ERR_CAST, ERR_CONVERT, ERR_DB, ERR_FORMAT, ERR_INTERNAL,
-    ERR_MERGE, ERR_PARSE, ERR_WEB,
-};
-pub use future::{FutureHandler, FutureObj};
-pub use number::{DoubleCastTrait, IntegerCastTrait};
-pub use string::StringExt;
-pub use template::{
-    render_simple_template, render_sql_template, render_template, render_template_recursion,
-    ContextType, TemplateContext, TemplateContextExt,
-};
-pub use value::{
-    convert::ValueConvertExt, merge::ValueMergeExt, pointer::ValuePointerExt, value::Value,
-};
-pub use vec::VecExt;
+/// 可代替std::result::Result<T, AnyError>操作的工具
+pub type Result<T> = std::result::Result<T, error::AppError>;
+
+/// 默认返回成功
+#[allow(non_snake_case)]
+pub fn Ok<T>(t: T) -> Result<T> {
+    std::result::Result::Ok(t)
+}
