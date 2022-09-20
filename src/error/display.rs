@@ -1,29 +1,38 @@
 use std::fmt::Display;
 
-use super::AppError;
+use backtrace::Backtrace;
+
+use super::{backtrace::enable_backtrace, AppError};
 
 impl std::fmt::Debug for AppError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("AnyError")
-            .field("name", &self.name)
-            .field("code", &self.code)
-            .field("msg", &self.msg)
-            .field("msg_detail", &self.msg_detail)
+        f.debug_struct("AppError")
+            .field("name", &self.name_ref())
+            .field("code", &self.code_ref())
+            .field("msg", &self.msg_ref())
+            .field("msg_detail", &self.msg_detail_ref())
             .finish()
             .unwrap();
 
-        if self.context_map.is_some() && !self.context_map.as_ref().unwrap().is_empty() {
+        if self.context_map_ref().is_some() {
             write!(f, "\nContext Value:")?;
-            for (k, v) in self.context_map.as_ref().unwrap() {
+            for (k, v) in self.context_map_ref().unwrap() {
                 write!(f, "\n\t{}: {:?}", k, v)?;
             }
         }
 
-        if !self.cause.is_empty() {
-            let cause = self
-                .cause
-                .as_ref::<Box<dyn std::error::Error + Send + Sync + 'static>>();
+        if self.cause_ref().is_some() {
+            let cause = self.cause_ref().unwrap();
             write!(f, "\nCaused by: {:?}", cause)?;
+        }
+
+        if enable_backtrace() {
+            if self.backtrace_ref().is_some() {
+                let backtrace = self.backtrace_ref().unwrap();
+                write!(f, "\nBacktrace:\n{:?}", backtrace)?;
+            } else {
+                write!(f, "\nBacktrace:\n{:?}", Backtrace::new())?;
+            }
         }
 
         std::result::Result::Ok(())
@@ -32,11 +41,11 @@ impl std::fmt::Debug for AppError {
 
 impl Display for AppError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("AnyError")
-            .field("name", &self.name)
-            .field("code", &self.code)
-            .field("msg", &self.msg)
-            .field("msg_detail", &self.msg_detail)
+        f.debug_struct("AppError")
+            .field("name", &self.name_ref())
+            .field("code", &self.code_ref())
+            .field("msg", &self.msg_ref())
+            .field("msg_detail", &self.msg_detail_ref())
             .finish()
     }
 }

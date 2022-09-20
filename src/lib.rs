@@ -1,29 +1,37 @@
 //! 通用工具类
 pub mod any;
+pub mod bean;
 pub mod context;
+pub mod date;
 pub mod error;
+pub mod future;
+pub mod iter;
 pub mod page;
 pub mod template;
 pub mod types;
-pub mod value;
+
+pub(crate) mod value_type;
+pub use value_type::Value;
+
+#[macro_use]
+pub mod macros;
 
 /// Reexport
 pub mod crates {
     pub use async_trait;
-    pub use bson;
     pub use chrono;
     pub use ctor;
     pub use futures;
     pub use hyper;
     pub use lazy_static;
-    pub use opentelemetry_jaeger;
+    pub use opentelemetry;
     pub use rbatis;
     pub use rbdc_pg;
     pub use rbs;
     pub use serde_json;
     pub use serde_yaml;
     pub use tokio;
-    pub use toml;
+    pub use tracing_core;
     pub use tracing_opentelemetry;
     pub use tracing_subscriber;
 }

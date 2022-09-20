@@ -1,11 +1,10 @@
 use std::collections::{BTreeMap, HashMap};
 
 use crate::{
-    context::ContextExt,
+    context::ContextTrait,
     error::{ERR_ARGUMENT, ERR_FORMAT},
     types::StringExt,
-    value::Value,
-    Result,
+    Result, Value,
 };
 
 use super::{
@@ -15,16 +14,15 @@ use super::{
 
 /// 根据内容文本渲染模板
 pub fn render_simple_template(template: String, value: &Value) -> Result<String> {
-    let param = value.as_object().unwrap();
-    let ctx;
-    if param.contains_key("_root") && param.len() == 1 {
-        ctx = handlebars::Context::wraps(param.get("_root")).unwrap();
+    let param = value.as_object()?;
+    let ctx = if param.contains_key("_root") && param.len() == 1 {
+        handlebars::Context::wraps(param.get("_root")).unwrap()
     } else {
-        ctx = handlebars::Context::wraps(param).unwrap();
-    }
+        handlebars::Context::wraps(param).unwrap()
+    };
     match get_handlebars().render_template_with_context(template.as_str(), &ctx) {
         Ok(v) => Ok(v),
-        Err(e) => Err(ERR_FORMAT.msg_detail("模板渲染失败".to_string()).cause(e)),
+        Err(e) => Err(ERR_FORMAT.msg_detail("模板渲染失败").cause(e)),
     }
 }
 
@@ -44,12 +42,12 @@ pub fn render_template(
     match param {
         Value::Object(obj) => {
             for (k, v) in obj {
-                map.insert_value(k.as_str(), v.clone());
+                map.insert_value(k.as_str(), v.clone()).unwrap();
                 attrs.push(k.to_string());
             }
         }
         v => {
-            map.insert_value("_root", v.clone());
+            map.insert_value("_root", v.clone()).unwrap();
         }
     }
     map.insert_template(key, template.as_str(), attrs);
@@ -69,6 +67,7 @@ pub fn render_template_recursion(
     })
 }
 
+#[allow(clippy::cast_ref_to_mut)]
 fn render_template_recursion_inner(
     context: &HashMap<String, ContextType>,
     key: &str,
@@ -76,9 +75,11 @@ fn render_template_recursion_inner(
     let (root_template, root_attrs) = match context.get(&key.to_string()) {
         Some(v) => match v {
             ContextType::TemplateType { template, attrs } => (template.clone(), attrs),
-            _ => return Err(ERR_ARGUMENT.msg_detail(format!("{}不是ContextType类型", &key))),
+            _ => {
+                return Err(ERR_ARGUMENT.msg_detail(format!("{}不是ContextType类型", &key).as_str()))
+            }
         },
-        None => return Err(ERR_ARGUMENT.msg_detail(format!("模板定义{}不存在", &key))),
+        None => return Err(ERR_ARGUMENT.msg_detail(format!("模板定义{}不存在", &key).as_str())),
     };
     let context_mut = unsafe {
         &mut *(context as *const HashMap<String, ContextType> as *mut HashMap<String, ContextType>)
@@ -94,28 +95,31 @@ fn render_template_recursion_inner(
                     } => {
                         param.insert_string(
                             item_name.as_str(),
-                            render_template_recursion_inner(context, item_name)
-                                .unwrap()
-                                .0,
-                        );
+                            render_template_recursion_inner(context, item_name)?.0,
+                        )?;
                     }
                     ContextType::ValueType(v) => {
-                        param.insert_value(item_name, v.clone());
+                        param.insert_value(item_name, v.clone())?;
                     }
                     ContextType::InvokerType(it) => {
-                        param.insert_value(item_name, it.as_ref()(context_mut));
+                        param.insert_value(item_name, it.as_ref()(context_mut))?;
                     }
                 },
-                None => return Err(ERR_ARGUMENT.msg_detail(format!("模板定义{}不存在", item_name))),
+                None => {
+                    return Err(
+                        ERR_ARGUMENT.msg_detail(format!("模板定义{}不存在", item_name).as_str())
+                    )
+                }
             };
         }
     }
-    if context.contains_key("_root") {
-        param.insert(
-            "_root".to_string(),
-            context_mut.get_value("_root").unwrap().clone(),
-        );
-    }
+    match context_mut.get_value("_root") {
+        Ok(v) => match v {
+            Some(v2) => param.insert("_root".to_string(), v2.clone()),
+            None => None,
+        },
+        Err(e) => return Err(e),
+    };
     let res = render_simple_template(root_template, &Value::Object(param));
     res.map(|x| (x, PLACE_CONTEXT.with(|ctx| ctx.borrow().clone())))
 }

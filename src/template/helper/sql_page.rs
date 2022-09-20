@@ -23,21 +23,21 @@ impl HelperDef for SqlPageHelper {
         if h.is_block() {
             label = h
                 .template()
-                .map(|t| t.renders(r, ctx, rc).unwrap().to_string())
-                .unwrap_or("".to_string());
+                .map(|t| t.renders(r, ctx, rc).unwrap())
+                .unwrap_or_else(|| "".to_string());
             count_label = h
                 .hash_get("count_label")
                 .map(|x| x.value().as_str().unwrap().to_string())
-                .unwrap_or("".to_string());
+                .unwrap_or_else(|| "".to_string());
         } else {
             label = h
                 .hash_get("label")
                 .map(|x| x.value().as_str().unwrap().to_string())
-                .unwrap_or("".to_string());
+                .unwrap_or_else(|| "".to_string());
             count_label = h
                 .hash_get("count_label")
                 .map(|x| x.value().as_str().unwrap().to_string())
-                .unwrap_or("count(*)".to_string());
+                .unwrap_or_else(|| "count(*)".to_string());
         }
 
         if is_count_sql {

@@ -1,6 +1,6 @@
 [package]
 name = "knife-util"
-version = "0.1.5"
+version = "0.1.6"
 authors = ["ocaso <ocaso1987@qq.com>"]
 description = "Knife框架基础工具包"
 keywords = ["util"]
@@ -11,30 +11,28 @@ edition = "2021"
 [dependencies]
 async-trait = "0.1.57"
 lazy_static = "1.4.0"
+backtrace = "0.3.66"
 futures = { version = "0.3.24", features = ["thread-pool"] }
 ctor = "0.1.23"
-chrono = "0.4.22"
+chrono = { version = "0.4.22", features = ["serde"] }
 globset = "0.4.9"
 regex = "1.6.0"
 handlebars = "4.3.4"
-clap = "3.2.21"
-bson = "2.4.0"
+clap = "3.2.22"
 indexmap = "1.9.1"
 serde = { version = "1.0.144", features = ["derive"] }
 serde_json = "1.0.85"
-serde_yaml = "0.9.11"
-toml = "0.5.9"
-opentelemetry = "0.17.0"
-opentelemetry-jaeger = "0.16.0"
+serde_yaml = "0.9.13"
+opentelemetry = "0.18.0"
 tracing = "0.1.36"
+tracing-core = "0.1.29"
 tracing-opentelemetry = "0.17.4"
 tracing-subscriber = "0.3.15"
 rbs = "0.1.11"
-rbatis = "4.0.36"
+rbatis = "4.0.39"
 rbdc-pg = "0.1.18"
-tokio = { version = "1.21.0", features = ["full"] }
+tokio = "1.21.1"
 hyper = { version = "0.14.20", features = ["full"] }
-tonic = "0.8.1"
 
 [features]
 default = []

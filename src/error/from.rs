@@ -1,4 +1,4 @@
-use super::{AppError, ERR_CONVERT, ERR_DB_ACTION, ERR_ENV_VAR, ERR_IO, ERR_WEB};
+use super::{AppError, ERR_CONVERT, ERR_DATA, ERR_DB_ACTION, ERR_ENV_VAR, ERR_IO, ERR_WEB};
 
 impl From<std::io::Error> for AppError {
     fn from(err: std::io::Error) -> Self {
@@ -24,12 +24,6 @@ impl From<serde_yaml::Error> for AppError {
     }
 }
 
-impl From<toml::de::Error> for AppError {
-    fn from(err: toml::de::Error) -> Self {
-        ERR_CONVERT.cause(err)
-    }
-}
-
 impl From<rbatis::Error> for AppError {
     fn from(err: rbatis::Error) -> Self {
         ERR_DB_ACTION.cause(err)
@@ -39,5 +33,11 @@ impl From<rbatis::Error> for AppError {
 impl From<hyper::Error> for AppError {
     fn from(err: hyper::Error) -> Self {
         ERR_WEB.cause(err)
+    }
+}
+
+impl From<chrono::ParseError> for AppError {
+    fn from(err: chrono::ParseError) -> Self {
+        ERR_DATA.cause(err)
     }
 }

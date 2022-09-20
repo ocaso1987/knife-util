@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::types::VecExt;
+use crate::iter::vec::VecExt;
 
 /// 分页请求
 #[derive(Deserialize, Debug, Clone)]
@@ -54,7 +54,7 @@ impl<T> PageResult<T> {
             page: self.page,
             limit: self.limit,
             total: self.total,
-            list: self.list.map(fun),
+            list: self.list.map_collect(fun),
         }
     }
 }

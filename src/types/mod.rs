@@ -2,9 +2,7 @@
 pub(crate) mod double;
 pub(crate) mod integer;
 pub(crate) mod string;
-pub(crate) mod vec;
 
-pub use double::DoubleCastExt;
-pub use integer::IntegerCastExt;
+pub use double::DoubleExt;
+pub use integer::IntegerExt;
 pub use string::StringExt;
-pub use vec::VecExt;

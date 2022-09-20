@@ -10,6 +10,8 @@ use std::{
 use handlebars::Handlebars;
 pub use lazy_static::lazy_static;
 
+use crate::Value;
+
 use super::helper::{place::place_helper, sql_page::SqlPageHelper};
 
 lazy_static! {
@@ -19,7 +21,7 @@ lazy_static! {
 }
 
 thread_local! (
-    pub(crate) static PLACE_CONTEXT: RefCell<BTreeMap<String,crate::value::Value>>  = RefCell::new(BTreeMap::new())
+    pub(crate) static PLACE_CONTEXT: RefCell<BTreeMap<String,Value>>  = RefCell::new(BTreeMap::new())
 );
 
 pub(crate) fn get_handlebars() -> MutexGuard<'static, Handlebars<'static>> {

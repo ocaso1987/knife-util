@@ -12,13 +12,13 @@ use std::{
 /// 存入与取出数据时类型需保持一致
 /// 需要注意的是，AnyValue被简化为了Send+Sync类型的，但存入的数据并不做检查
 /// 在多线程环境下的使用，其数据安全性由开发者自身确认
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct AnyValue {
     /// 用于存放实际对象
     pointer: Option<*mut u8>,
 
     /// 数据类型，用于取出时进行检查
-    type_name: String,
+    type_name: &'static str,
 
     /// 数据是否已取出
     is_taken: bool,
@@ -44,7 +44,7 @@ impl AnyValue {
     pub fn new_zero() -> Self {
         AnyValue {
             pointer: None,
-            type_name: "".to_string(),
+            type_name: "",
             is_taken: false,
         }
     }
@@ -80,6 +80,7 @@ impl AnyValue {
     }
 
     /// 替换数据，需指定数据类型V
+    #[allow(clippy::cast_ref_to_mut)]
     pub fn replace_with_write<V, F>(&self, v: V, f: F)
     where
         F: Fn(*mut V, V),
@@ -89,14 +90,15 @@ impl AnyValue {
         f(pointer.cast::<V>(), v);
         unsafe {
             let ptr = &mut *(self as *const Self as *mut Self);
-            ptr.type_name = type_name::<V>().to_string();
+            ptr.type_name = type_name::<V>();
             ptr.pointer = Some(pointer);
             ptr.is_taken = false;
         }
     }
 
     /// 取出可变数据引用，可采用继承类型的特征，不需要与原始类型完全一致
-    pub fn as_mut<V>(&self) -> &mut V {
+    #[allow(clippy::mut_from_ref)]
+    pub fn to_mut<V>(&self) -> &mut V {
         self.check_taken();
         self.check_type::<V>();
         self.check_none();
@@ -104,7 +106,7 @@ impl AnyValue {
     }
 
     /// 取出数据引用，可采用继承类型的特征，不需要与原始类型完全一致
-    pub fn as_ref<V>(&self) -> &V {
+    pub fn to_ref<V>(&self) -> &V {
         self.check_taken();
         self.check_type::<V>();
         self.check_none();
@@ -128,6 +130,7 @@ impl AnyValue {
     }
 
     /// 取出数据，只能执行一次
+    #[allow(clippy::cast_ref_to_mut)]
     pub fn take_with_read<V, F>(&self, f: F) -> V
     where
         F: Fn(*const V) -> V,
@@ -140,7 +143,7 @@ impl AnyValue {
 
     /// 取出字符数据，如果存入数据不是字符类型将抛出异常
     pub fn get_string(&self) -> String {
-        self.as_ref::<String>().to_string()
+        self.to_ref::<String>().to_string()
     }
 
     fn check_type<V>(&self) {
