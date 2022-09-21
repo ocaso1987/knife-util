@@ -1,11 +1,7 @@
-use crate::{
-    bean::{traits::MergeExt, Value},
-    error::ERR_MERGE,
-    Result,
-};
+use crate::{bean::MergeTrait, error::ERR_MERGE, Result, Value};
 
-impl MergeExt for Value {
-    fn merge(&mut self, target: &Self) -> Result<Self> {
+impl MergeTrait for Value {
+    fn merge_self(&mut self, target: &Self) -> Result<Self> {
         match self {
             Value::Array(arr) => {
                 match target {
@@ -22,7 +18,7 @@ impl MergeExt for Value {
                 Value::Object(obj2) => {
                     for (k2, v2) in obj2 {
                         if obj.contains_key(k2) {
-                            let v2 = obj.get_mut(k2).unwrap().merge(v2)?.clone();
+                            let v2 = obj.get_mut(k2).unwrap().merge_self(v2)?.clone();
                             obj.insert(k2.to_string(), v2);
                         } else {
                             obj.insert(k2.to_string(), v2.clone());
@@ -30,7 +26,7 @@ impl MergeExt for Value {
                     }
                     Ok(self.clone())
                 }
-                _ => Err(ERR_MERGE.msg_detail("Bson之Document数据不接受来自于其它类型的MERGE操作")),
+                _ => Err(ERR_MERGE.msg_detail("Value之Object数据不接受来自于其它类型的MERGE操作")),
             },
             _ => Ok(target.clone()),
         }

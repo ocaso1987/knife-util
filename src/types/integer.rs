@@ -12,7 +12,7 @@ pub trait IntegerExt {
     fn cast_to_u64(self) -> Result<u64>;
 }
 
-pub(crate) trait IntegerFrom<Src> {
+trait IntegerFrom<Src> {
     type Output;
     fn cast(src: Src) -> Self::Output;
 }

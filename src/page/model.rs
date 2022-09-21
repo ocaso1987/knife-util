@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::iter::vec::VecExt;
+use crate::iter::VecExt;
 
 /// 分页请求
 #[derive(Deserialize, Debug, Clone)]

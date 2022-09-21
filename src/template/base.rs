@@ -12,19 +12,19 @@ pub use lazy_static::lazy_static;
 
 use crate::Value;
 
-use super::helper::{place::place_helper, sql_page::SqlPageHelper};
+use super::helper::{place_helper, SqlPageHelper};
 
 lazy_static! {
-    pub(crate) static ref GLOBAL_TEMPLATE: Arc<Mutex<Handlebars<'static>>> =
+    static ref GLOBAL_TEMPLATE: Arc<Mutex<Handlebars<'static>>> =
         Arc::new(Mutex::new(Handlebars::new()));
-    pub(crate) static ref GLOBAL_TEMPLATE_INITED: AtomicBool = AtomicBool::new(false);
+    static ref GLOBAL_TEMPLATE_INITED: AtomicBool = AtomicBool::new(false);
 }
 
 thread_local! (
-    pub(crate) static PLACE_CONTEXT: RefCell<BTreeMap<String,Value>>  = RefCell::new(BTreeMap::new())
+    pub(super)   static PLACE_CONTEXT: RefCell<BTreeMap<String,Value>>  = RefCell::new(BTreeMap::new())
 );
 
-pub(crate) fn get_handlebars() -> MutexGuard<'static, Handlebars<'static>> {
+pub(super) fn get_handlebars() -> MutexGuard<'static, Handlebars<'static>> {
     let mut global = GLOBAL_TEMPLATE.lock().unwrap();
     if !GLOBAL_TEMPLATE_INITED.load(Ordering::Relaxed) {
         init(&mut global);

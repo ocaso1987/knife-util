@@ -1,6 +1,6 @@
-use crate::bean::{base::parse_index, traits::PointerExt};
+use crate::bean::{base::parse_index, PointerTrait};
 
-impl PointerExt for serde_json::Value {
+impl PointerTrait for serde_json::Value {
     type Context = serde_json::Value;
     fn p(&self, pointer: &str) -> Option<&Self::Context> {
         if pointer.is_empty() {

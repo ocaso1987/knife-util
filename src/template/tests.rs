@@ -26,9 +26,9 @@ mod tests {
             "#,
             vec!["data".to_string()],
         );
-        map.insert_value(
+        map.insert_json(
             "data",
-            json!({
+            &json!({
                 "name": "zhangshan",
                 "age": [13, 14],
                 "address": [{
@@ -38,9 +38,7 @@ mod tests {
                     "country": "usa",
                     "city": "newyork",
                 }]
-            })
-            .as_value()
-            .unwrap(),
+            }),
         )
         .unwrap();
         let res = render_template_recursion(&map, "sql").unwrap();

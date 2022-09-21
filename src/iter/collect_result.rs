@@ -1,5 +1,6 @@
 use crate::{Ok, Result};
 
+/// 将多个Result<T>的内容收集到Result<Vec<T>>中，当发生异常时会直接返回Err
 pub trait CollectResultTrait<T>: Sized
 where
     Self: Iterator<Item = Result<T>>,

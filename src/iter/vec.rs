@@ -10,7 +10,7 @@ pub trait VecExt<T> {
         F: Fn(&T) -> R;
 
     /// 将vec进行map转换，当转换过程中出现异常时，抛出异常
-    fn map_collect_into_vec<F, R>(&self, fun: F) -> Result<Vec<R>>
+    fn map_fold_result<F, R>(&self, fun: F) -> Result<Vec<R>>
     where
         F: Fn(&T) -> Result<R>;
 }
@@ -23,7 +23,7 @@ impl<T> VecExt<T> for Vec<T> {
         self.iter().map(fun).collect()
     }
 
-    fn map_collect_into_vec<F, R>(&self, fun: F) -> Result<Vec<R>>
+    fn map_fold_result<F, R>(&self, fun: F) -> Result<Vec<R>>
     where
         F: Fn(&T) -> Result<R>,
     {

@@ -1,6 +1,9 @@
-use crate::bean::{base::parse_index, traits::PointerExt, Value};
+use crate::{
+    bean::{base::parse_index, PointerTrait},
+    Value,
+};
 
-impl PointerExt for Value {
+impl PointerTrait for Value {
     type Context = Value;
     fn p(&self, pointer: &str) -> Option<&Self::Context> {
         if pointer.is_empty() {

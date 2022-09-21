@@ -1,6 +1,6 @@
-use crate::bean::{base::parse_index, traits::PointerExt};
+use crate::bean::{base::parse_index, PointerTrait};
 
-impl PointerExt for serde_yaml::Value {
+impl PointerTrait for serde_yaml::Value {
     type Context = serde_yaml::Value;
     fn p(&self, pointer: &str) -> Option<&Self::Context> {
         if pointer.is_empty() {

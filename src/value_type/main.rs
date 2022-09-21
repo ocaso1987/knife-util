@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
 use crate::{
-    date::YearMonth,
+    date::{Date, DateTime, Time, YearMonth},
     error::ERR_CAST,
     types::{DoubleExt, IntegerExt},
     Ok, Result,
@@ -22,9 +22,9 @@ pub enum Value {
     U64(u64),
     F32(f32),
     F64(f64),
-    Date(chrono::NaiveDate),
-    Time(chrono::NaiveTime),
-    DateTime(chrono::NaiveDateTime),
+    Date(Date),
+    Time(Time),
+    DateTime(DateTime),
     YearMonth(YearMonth),
     Binary(Vec<u8>),
     String(String),
@@ -217,12 +217,43 @@ impl Value {
         }
     }
 
+    pub fn as_date(&self) -> Result<Date> {
+        match self {
+            Value::String(v) => Date::parse_str(v.as_str()),
+            Value::Date(v) => Ok(*v),
+            _ => {
+                Err(ERR_CAST
+                    .msg_detail(format!("Value数据[{:?}]不能转换为Date类型", self).as_str()))
+            }
+        }
+    }
+
+    pub fn as_datetime(&self) -> Result<DateTime> {
+        match self {
+            Value::String(v) => DateTime::parse_str(v.as_str()),
+            Value::DateTime(v) => Ok(*v),
+            _ => Err(ERR_CAST
+                .msg_detail(format!("Value数据[{:?}]不能转换为YearMonth类型", self).as_str())),
+        }
+    }
+
+    pub fn as_time(&self) -> Result<Time> {
+        match self {
+            Value::String(v) => Time::parse_str(v.as_str()),
+            Value::Time(v) => Ok(*v),
+            _ => {
+                Err(ERR_CAST
+                    .msg_detail(format!("Value数据[{:?}]不能转换为Time类型", self).as_str()))
+            }
+        }
+    }
+
     pub fn as_year_month(&self) -> Result<YearMonth> {
         match self {
             Value::String(v) => YearMonth::parse_str(v.as_str()),
-            Value::Date(v) => YearMonth::from_date(v),
-            Value::DateTime(v) => YearMonth::from_date(&v.date()),
-            Value::YearMonth(v) => Ok(v.clone()),
+            Value::Date(v) => YearMonth::from_chrono_date(&v.to_chrono_date()),
+            Value::DateTime(v) => YearMonth::from_chrono_date(&v.to_chrono_date()),
+            Value::YearMonth(v) => Ok(*v),
             _ => Err(ERR_CAST
                 .msg_detail(format!("Value数据[{:?}]不能转换为YearMonth类型", self).as_str())),
         }

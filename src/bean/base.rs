@@ -36,7 +36,7 @@ pub trait PointerTrait {
     fn p(&self, pointer: &str) -> Option<&Self::Context>;
 }
 
-pub(crate) fn _parse_index(s: &str) -> Option<usize> {
+pub(super) fn parse_index(s: &str) -> Option<usize> {
     if s.starts_with('+') || (s.starts_with('0') && s.len() != 1) {
         return None;
     }

@@ -1,3 +1,8 @@
-pub(crate) mod collect_result;
-pub(crate) mod map;
-pub(crate) mod vec;
+//! 迭代器工具类
+mod collect_result;
+mod map;
+mod vec;
+
+pub use collect_result::CollectResultTrait;
+pub use map::MapExt;
+pub use vec::VecExt;

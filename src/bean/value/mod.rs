@@ -1,1 +1,3 @@
-pub(crate) mod context;
+mod context;
+mod merge;
+mod pointer;

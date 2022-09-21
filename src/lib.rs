@@ -10,16 +10,12 @@ pub mod page;
 pub mod template;
 pub mod types;
 
-pub(crate) mod value_type;
+mod value_type;
 pub use value_type::Value;
-
-#[macro_use]
-pub mod macros;
 
 /// Reexport
 pub mod crates {
     pub use async_trait;
-    pub use chrono;
     pub use ctor;
     pub use futures;
     pub use hyper;
@@ -28,12 +24,17 @@ pub mod crates {
     pub use rbatis;
     pub use rbdc_pg;
     pub use rbs;
-    pub use serde_json;
-    pub use serde_yaml;
     pub use tokio;
     pub use tracing_core;
     pub use tracing_opentelemetry;
     pub use tracing_subscriber;
+}
+
+/// Reexport，但不会在knife_framework中导出
+pub mod crates_builtin {
+    pub use chrono;
+    pub use serde_json;
+    pub use serde_yaml;
 }
 
 /// 可代替std::result::Result<T, AnyError>操作的工具

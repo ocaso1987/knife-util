@@ -166,7 +166,7 @@ pub trait ContextTrait {
     }
 
     /// 集合类中取出年月类型
-    fn get_year_month(&self, key: &str) -> Result<YearMonth> {
+    fn get_yearmonth(&self, key: &str) -> Result<YearMonth> {
         match self.get_value(key) {
             std::result::Result::Ok(v) => match v {
                 Some(v2) => v2.as_year_month(),
@@ -176,11 +176,11 @@ pub trait ContextTrait {
         }
     }
     /// 集合中插入年月类型
-    fn insert_year_month(&mut self, key: &str, value: YearMonth) -> Result<()> {
+    fn insert_yearmonth(&mut self, key: &str, value: YearMonth) -> Result<()> {
         self.insert_value(key, Value::YearMonth(value))
     }
     /// 集合类中取出年月类型
-    fn get_opt_year_month(&self, key: &str) -> Result<Option<YearMonth>> {
+    fn get_opt_yearmonth(&self, key: &str) -> Result<Option<YearMonth>> {
         match self.get_value(key) {
             std::result::Result::Ok(v) => match v {
                 Some(v2) => v2.as_year_month().map(Some),
@@ -190,7 +190,7 @@ pub trait ContextTrait {
         }
     }
     /// 集合中插入年月类型
-    fn insert_opt_year_month(&mut self, key: &str, value: Option<YearMonth>) -> Result<()> {
+    fn insert_opt_yearmonth(&mut self, key: &str, value: Option<YearMonth>) -> Result<()> {
         if let Some(v) = value {
             self.insert_value(key, Value::YearMonth(v))
         } else {

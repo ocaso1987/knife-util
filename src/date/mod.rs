@@ -1,10 +1,13 @@
-mod date_ext;
-mod datetime_ext;
+//! 日期工具类
+//!
+//! 同chrono中的工具类，但有格式上的约束
+mod date_type;
+mod datetime_type;
 mod main;
-mod time_ext;
-mod yearmonth;
+mod time_type;
+mod yearmonth_type;
 
-pub use date_ext::DateExt;
-pub use datetime_ext::DateTimeExt;
-pub use time_ext::TimeExt;
-pub use yearmonth::YearMonth;
+pub use date_type::Date;
+pub use datetime_type::DateTime;
+pub use time_type::Time;
+pub use yearmonth_type::YearMonth;

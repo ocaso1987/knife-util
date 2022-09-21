@@ -1,8 +1,9 @@
 use std::collections::HashMap;
 
 use backtrace::Backtrace;
+use serde_json::json;
 
-use crate::{any::AnyValue, context::ContextTrait, value, Value};
+use crate::{any::AnyValue, context::ContextTrait, Value, bean::AsValueTrait};
 
 use super::backtrace::enable_backtrace;
 
@@ -109,12 +110,12 @@ impl AppError {
 
     /// 定义输出到前端的格式
     pub fn to_json_string(&self) -> String {
-        let mut ctx = value!( {
+        let mut ctx = json!( {
             "name": self.name,
             "code": self.code,
             "msg": self.msg,
             "msg_detail": self.msg_detail,
-        });
+        }).as_value().unwrap();
         if !self.cause.is_empty() {
             let cause = self
                 .cause
