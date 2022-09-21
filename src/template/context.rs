@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{context::ContextExt, value::Value};
+use crate::{context::ContextTrait, Ok, Result, Value};
 
 /// 上下文数据类型
 pub enum ContextType {
@@ -51,14 +51,15 @@ pub trait TemplateContextExt {
     );
 }
 
-impl ContextExt for HashMap<String, ContextType> {
+impl ContextTrait for HashMap<String, ContextType> {
     type Context = ContextType;
-    fn get_value(&mut self, key: &str) -> Option<&Value> {
-        self.get(key).map(|x| x.get_value())
+    fn get_value(&self, key: &str) -> Result<Option<&Value>> {
+        Ok(self.get(key).map(|x| x.get_value()))
     }
 
-    fn insert_value(&mut self, key: &str, value: Value) {
+    fn insert_value(&mut self, key: &str, value: Value) -> Result<()> {
         self.insert(key.to_string(), ContextType::ValueType(value));
+        Ok(())
     }
 }
 

@@ -46,14 +46,14 @@ where
             "off" => Ok(false),
             "1" => Ok(true),
             "0" => Ok(false),
-            _ => Err(ERR_CONVERT.msg_detail(format!("字符串[{}]不能转换为bool类型", str))),
+            _ => Err(ERR_CONVERT.msg_detail(format!("字符串[{}]不能转换为bool类型", str).as_str())),
         };
     }
 
     fn if_blank(&self, default_value: String) -> String {
         let str: String = self.clone().into();
         if !str.is_empty() {
-            str.clone()
+            str
         } else {
             default_value
         }

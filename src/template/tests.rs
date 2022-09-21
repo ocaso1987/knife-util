@@ -5,12 +5,12 @@ mod tests {
     use serde_json::json;
 
     use crate::{
-        context::ContextExt,
+        bean::AsValueTrait,
+        context::ContextTrait,
         template::{
             context::TemplateContextExt,
             render::{render_sql_template, render_template, render_template_recursion},
         },
-        value::ConvertExt,
     };
 
     #[test]
@@ -26,9 +26,9 @@ mod tests {
             "#,
             vec!["data".to_string()],
         );
-        map.insert_value(
+        map.insert_json(
             "data",
-            json!({
+            &json!({
                 "name": "zhangshan",
                 "age": [13, 14],
                 "address": [{
@@ -38,9 +38,9 @@ mod tests {
                     "country": "usa",
                     "city": "newyork",
                 }]
-            })
-            .as_value(),
-        );
+            }),
+        )
+        .unwrap();
         let res = render_template_recursion(&map, "sql").unwrap();
         println!("{:?}", res.0);
         println!("{:?}", res.1);
@@ -55,7 +55,7 @@ mod tests {
                 select * from table where name={{$ this}} 
             "#
             .to_string(),
-            &json!(["张三"]).as_value(),
+            &json!(["张三"]).as_value().unwrap(),
         )
         .unwrap();
         println!("{:?}", res.0);
@@ -74,7 +74,7 @@ mod tests {
                 {{/each}}
             "#
             .to_string(),
-            &json!(["张三", "李四"]).as_value(),
+            &json!(["张三", "李四"]).as_value().unwrap(),
         )
         .unwrap();
         println!("{:?}", res.0);
@@ -104,7 +104,8 @@ mod tests {
                     "city": "newyork",
                 }]
             })
-            .as_value(),
+            .as_value()
+            .unwrap(),
         )
         .unwrap();
         println!("{:?}", res.0);
@@ -134,7 +135,8 @@ mod tests {
                     "city": "newyork",
                 }]
             })
-            .as_value(),
+            .as_value()
+            .unwrap(),
         )
         .unwrap();
         println!("{:?}", res.0);
