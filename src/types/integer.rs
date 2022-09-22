@@ -1,6 +1,9 @@
-use crate::{error::ERR_CAST, Result};
+use crate::{error::ERR_CAST, Result, OK};
 
 /// 用于整型型计算处理的工具类
+///
+/// 为什么没有isize、usize?
+/// 因为两者不确定长度，直接规定团队不允许使用可以减少代码风险的发生
 pub trait IntegerExt {
     fn cast_to_i8(self) -> Result<i8>;
     fn cast_to_i16(self) -> Result<i16>;
@@ -24,7 +27,7 @@ macro_rules! promotion {
                 impl IntegerFrom<$src> for $dst {
                     type Output=Result<$dst>;
                     fn cast(src: $src) -> Self::Output{
-                        Ok(src as $dst)
+                        OK(src as $dst)
                     }
                 }
             )+
@@ -50,7 +53,7 @@ macro_rules! half_promotion {
                                 .as_str(),
                             ))
                         } else {
-                            Ok(src as $dst)
+                            OK(src as $dst)
                         }
                     }
                 }
@@ -77,7 +80,7 @@ macro_rules! from_unsigned {
                                 .as_str(),
                             ))
                         } else {
-                            Ok(src as $dst)
+                            OK(src as $dst)
                         }
                     }
                 }
@@ -114,7 +117,7 @@ macro_rules! from_signed {
                                 .as_str(),
                             ))
                         } else {
-                            Ok(src as $dst)
+                            OK(src as $dst)
                         }
                     }
                 }

@@ -35,7 +35,7 @@ impl std::fmt::Debug for AppError {
             }
         }
 
-        std::result::Result::Ok(())
+        Ok(())
     }
 }
 

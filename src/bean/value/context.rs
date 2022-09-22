@@ -1,4 +1,4 @@
-use crate::{context::ContextTrait, error::ERR_DATA, Ok, Result, Value};
+use crate::{context::ContextTrait, error::ERR_DATA, Result, Value, OK};
 
 impl ContextTrait for Value {
     type Context = Value;
@@ -6,9 +6,9 @@ impl ContextTrait for Value {
     fn get_value(&self, key: &str) -> Result<Option<&Value>> {
         if self.is_object() {
             let map = self.as_object_mut()?;
-            Ok(map.get(key))
+            OK(map.get(key))
         } else {
-            Ok(None)
+            OK(None)
         }
     }
 
@@ -16,7 +16,7 @@ impl ContextTrait for Value {
         if self.is_object() {
             let map = self.as_object_mut()?;
             map.insert(key.to_string(), value);
-            Ok(())
+            OK(())
         } else {
             Err(ERR_DATA.msg_detail("不是合法的Value::Object对象"))
         }

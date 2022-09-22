@@ -42,8 +42,6 @@ mod tests {
         )
         .unwrap();
         let res = render_template_recursion(&map, "sql").unwrap();
-        println!("{:?}", res.0);
-        println!("{:?}", res.1);
         assert!(res.0.contains("$1"));
         assert!(res.1.contains_key("$1"));
     }
@@ -58,8 +56,6 @@ mod tests {
             &json!(["张三"]).as_value().unwrap(),
         )
         .unwrap();
-        println!("{:?}", res.0);
-        println!("{:?}", res.1);
         assert!(res.0.contains("$1"));
         assert!(res.1.contains_key("$1"));
     }
@@ -77,8 +73,6 @@ mod tests {
             &json!(["张三", "李四"]).as_value().unwrap(),
         )
         .unwrap();
-        println!("{:?}", res.0);
-        println!("{:?}", res.1);
         assert!(res.0.contains("$1"));
         assert!(res.1.contains_key("$1"));
     }
@@ -108,8 +102,6 @@ mod tests {
             .unwrap(),
         )
         .unwrap();
-        println!("{:?}", res.0);
-        println!("{:?}", res.1);
         assert!(res.0.contains("$1"));
         assert!(res.1.contains_key("$1"));
     }
@@ -139,8 +131,6 @@ mod tests {
             .unwrap(),
         )
         .unwrap();
-        println!("{:?}", res.0);
-        println!("{:?}", res.1);
         assert!(res.0.contains("$1"));
     }
 }

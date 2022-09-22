@@ -3,7 +3,7 @@ use chrono::Datelike;
 use crate::{
     bean::{AsValueTrait, MergeValueTrait},
     error::AppError,
-    Ok, Result, Value,
+    Result, Value, OK,
 };
 
 use super::{
@@ -25,7 +25,7 @@ impl ToString for YearMonth {
 
 impl AsValueTrait for YearMonth {
     fn as_value(&self) -> Result<Value> {
-        Ok(Value::YearMonth(*self))
+        OK(Value::YearMonth(*self))
     }
 }
 
@@ -34,7 +34,7 @@ impl MergeValueTrait for YearMonth {
         if let Some(v) = target {
             *self = v.as_year_month()?;
         }
-        Ok(*self)
+        OK(*self)
     }
 }
 
@@ -75,7 +75,7 @@ impl<'de> serde::de::Deserialize<'de> for YearMonth {
 
 impl YearMonth {
     pub fn from_chrono_date(date: &chrono::NaiveDate) -> Result<YearMonth> {
-        Ok(YearMonth {
+        OK(YearMonth {
             date: date.with_day(1).unwrap(),
         })
     }

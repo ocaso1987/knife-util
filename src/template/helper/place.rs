@@ -1,6 +1,6 @@
 use handlebars::{Context, Handlebars, Helper, Output, RenderContext, RenderError};
 
-use crate::{context::ContextTrait, template::base::PLACE_CONTEXT};
+use crate::template::base::PLACE_CONTEXT;
 
 /// 生成占位符，可用于SQL但不具限于SQL拼装场景
 pub(crate) fn place_helper(
@@ -20,12 +20,12 @@ pub(crate) fn place_helper(
         if let Some(v) = name {
             let key = v.render();
             out.write(key.as_str()).unwrap();
-            map.insert_json(key.as_str(), value.value()).unwrap();
+            map.insert(key, value.relative_path().unwrap().clone());
         } else {
             let pos = map.len();
             let key = format!("${}", pos + 1);
             out.write(key.as_str()).unwrap();
-            map.insert_json(key.as_str(), value.value()).unwrap();
+            map.insert(key, value.relative_path().unwrap().clone());
         }
     });
     Ok(())

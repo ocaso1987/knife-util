@@ -1,25 +1,27 @@
-use crate::{bean::FromValueTrait, error::ERR_INTERNAL, iter::VecExt, Ok, Result, Value};
+use crate::{
+    bean::FromValueTrait, error::ERR_INTERNAL, iter::CollectResultTrait, Result, Value, OK,
+};
 
 impl FromValueTrait for rbs::Value {
     fn from_value(value: &Value) -> Result<Self> {
         match value {
-            Value::Null => Ok(rbs::Value::Null),
-            Value::Bool(v) => Ok(rbs::Value::Bool(*v)),
-            Value::I32(v) => Ok(rbs::Value::I32(*v)),
-            Value::I64(v) => Ok(rbs::Value::I64(*v)),
-            Value::U32(v) => Ok(rbs::Value::U32(*v)),
-            Value::U64(v) => Ok(rbs::Value::U64(*v)),
-            Value::F32(v) => Ok(rbs::Value::F32(*v)),
-            Value::F64(v) => Ok(rbs::Value::F64(*v)),
-            Value::Date(v) => Ok(rbs::Value::Ext(
+            Value::Null => OK(rbs::Value::Null),
+            Value::Bool(v) => OK(rbs::Value::Bool(*v)),
+            Value::I32(v) => OK(rbs::Value::I32(*v)),
+            Value::I64(v) => OK(rbs::Value::I64(*v)),
+            Value::U32(v) => OK(rbs::Value::U32(*v)),
+            Value::U64(v) => OK(rbs::Value::U64(*v)),
+            Value::F32(v) => OK(rbs::Value::F32(*v)),
+            Value::F64(v) => OK(rbs::Value::F64(*v)),
+            Value::Date(v) => OK(rbs::Value::Ext(
                 "Date",
                 Box::new(rbs::Value::String(v.to_string())),
             )),
-            Value::Time(v) => Ok(rbs::Value::Ext(
+            Value::Time(v) => OK(rbs::Value::Ext(
                 "Time",
                 Box::new(rbs::Value::String(v.to_string())),
             )),
-            Value::DateTime(v) => Ok(rbs::Value::Ext(
+            Value::DateTime(v) => OK(rbs::Value::Ext(
                 "DateTime",
                 Box::new(rbs::Value::String(v.to_string())),
             )),
@@ -30,17 +32,19 @@ impl FromValueTrait for rbs::Value {
                 )
                 .as_str(),
             )),
-            Value::String(v) => Ok(rbs::Value::String(v.clone())),
-            Value::Binary(v) => Ok(rbs::Value::Binary(v.clone())),
+            Value::String(v) => OK(rbs::Value::String(v.clone())),
+            Value::Binary(v) => OK(rbs::Value::Binary(v.clone())),
             Value::Array(arr) => arr
-                .map_fold_result(|x| Self::from_value(x))
+                .iter()
+                .map(|x| Self::from_value(x))
+                .collect_into_vec()
                 .map(rbs::Value::Array),
             Value::Object(obj) => {
                 let mut map = rbs::value::map::ValueMap::new();
                 for (k, v) in obj {
                     map.insert(rbs::Value::String(k.clone()), Self::from_value(v).unwrap());
                 }
-                Ok(rbs::Value::Map(map))
+                OK(rbs::Value::Map(map))
             }
         }
     }

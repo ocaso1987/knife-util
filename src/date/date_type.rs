@@ -1,7 +1,7 @@
 use crate::{
     bean::{AsValueTrait, MergeValueTrait},
     error::AppError,
-    Ok, Result, Value,
+    Result, Value, OK,
 };
 
 /// 日期工具，同chrono:NativeDate
@@ -18,7 +18,7 @@ impl ToString for Date {
 
 impl AsValueTrait for Date {
     fn as_value(&self) -> Result<Value> {
-        Ok(Value::Date(*self))
+        OK(Value::Date(*self))
     }
 }
 
@@ -27,7 +27,7 @@ impl MergeValueTrait for Date {
         if let Some(v) = target {
             *self = v.as_date()?;
         }
-        Ok(*self)
+        OK(*self)
     }
 }
 
@@ -68,7 +68,7 @@ impl<'de> serde::de::Deserialize<'de> for Date {
 
 impl Date {
     pub fn from_date(v: chrono::NaiveDate) -> Result<Date> {
-        Ok(Date { date: v })
+        OK(Date { date: v })
     }
 
     pub fn parse_str(str: &str) -> Result<Date> {

@@ -1,4 +1,4 @@
-use crate::{bean::MergeValueTrait, Ok, Result, Value};
+use crate::{bean::MergeValueTrait, Result, Value, OK};
 
 impl<T> MergeValueTrait for Option<T>
 where
@@ -9,7 +9,7 @@ where
         match target {
             Some(v) => {
                 if v.is_null()? {
-                    Ok(self.clone())
+                    OK(self.clone())
                 } else {
                     let new_value = if let Some(o) = self {
                         o.merge_value(target)?
@@ -18,10 +18,10 @@ where
                         defau_value.merge_value(Some(v))?
                     };
                     self.replace(new_value);
-                    Ok(self.clone())
+                    OK(self.clone())
                 }
             }
-            None => Ok(self.clone()),
+            None => OK(self.clone()),
         }
     }
 }
@@ -38,7 +38,7 @@ where
                 self.push(defau_value.merge_value(Some(v))?.clone())
             }
         }
-        Ok(self.clone())
+        OK(self.clone())
     }
 }
 
@@ -49,7 +49,7 @@ impl MergeValueTrait for bool {
                 *self = v.as_bool()?;
             }
         }
-        Ok(*self)
+        OK(*self)
     }
 }
 
@@ -60,7 +60,7 @@ impl MergeValueTrait for i32 {
                 *self = v.as_i32()?;
             }
         }
-        Ok(*self)
+        OK(*self)
     }
 }
 
@@ -71,7 +71,7 @@ impl MergeValueTrait for i64 {
                 *self = v.as_i64()?;
             }
         }
-        Ok(*self)
+        OK(*self)
     }
 }
 
@@ -82,7 +82,7 @@ impl MergeValueTrait for u64 {
                 *self = v.as_u64()?;
             }
         }
-        Ok(*self)
+        OK(*self)
     }
 }
 
@@ -93,7 +93,7 @@ impl MergeValueTrait for f64 {
                 *self = v.as_f64()?;
             }
         }
-        Ok(*self)
+        OK(*self)
     }
 }
 
@@ -104,6 +104,6 @@ impl MergeValueTrait for String {
                 *self = v.as_str()?.to_string();
             }
         }
-        Ok(self.clone())
+        OK(self.clone())
     }
 }

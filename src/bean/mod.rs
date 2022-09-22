@@ -8,4 +8,6 @@ mod types;
 mod value;
 mod yaml;
 
-pub use base::{AsValueTrait, FromValueTrait, MergeTrait, MergeValueTrait, PointerTrait};
+pub use base::{
+    AsValueTrait, DebugTrait, FromValueTrait, MergeTrait, MergeValueTrait, PointerTrait,
+};

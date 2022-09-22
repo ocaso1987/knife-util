@@ -1,4 +1,4 @@
-use crate::{error::ERR_CAST, Result};
+use crate::{error::ERR_CAST, Result, OK};
 
 /// 用于浮点型计算处理的工具类
 pub trait DoubleExt {
@@ -18,7 +18,7 @@ macro_rules! promotion {
                 impl DoubleFrom<$src> for $dst {
                     type Output=Result<$dst>;
                     fn cast(src: $src) -> Self::Output{
-                        Ok(src as $dst)
+                        OK(src as $dst)
                     }
                 }
             )+
@@ -64,7 +64,7 @@ macro_rules! from_high_float {
                                 .as_str(),
                             ))
                         } else  {
-                            return Ok(src as $dst);
+                            return OK(src as $dst);
                         }
                     }
                 }
