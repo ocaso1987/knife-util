@@ -1,7 +1,5 @@
 use serde::{Deserialize, Serialize};
 
-use crate::iter::VecExt;
-
 /// 分页请求
 #[derive(Deserialize, Debug, Clone)]
 pub struct PageRequest<T> {
@@ -54,7 +52,7 @@ impl<T> PageResult<T> {
             page: self.page,
             limit: self.limit,
             total: self.total,
-            list: self.list.map_collect(fun),
+            list: self.list.iter().map(fun).collect(),
         }
     }
 }

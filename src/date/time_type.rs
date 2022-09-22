@@ -1,7 +1,7 @@
 use crate::{
     bean::{AsValueTrait, MergeValueTrait},
     error::AppError,
-    Result, Value,
+    Result, Value, OK,
 };
 
 /// 时间工具，同chrono:NativeTime
@@ -18,7 +18,7 @@ impl ToString for Time {
 
 impl AsValueTrait for Time {
     fn as_value(&self) -> Result<Value> {
-        Ok(Value::Time(*self))
+        OK(Value::Time(*self))
     }
 }
 
@@ -27,7 +27,7 @@ impl MergeValueTrait for Time {
         if let Some(v) = target {
             *self = v.as_time()?;
         }
-        Ok(*self)
+        OK(*self)
     }
 }
 
@@ -68,7 +68,7 @@ impl<'de> serde::de::Deserialize<'de> for Time {
 
 impl Time {
     pub fn from_time(v: chrono::NaiveTime) -> Result<Time> {
-        Ok(Time { time: v })
+        OK(Time { time: v })
     }
 
     pub fn parse_str(str: &str) -> Result<Time> {

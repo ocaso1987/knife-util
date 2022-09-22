@@ -1,4 +1,4 @@
-use crate::{Ok, Result};
+use crate::{Result, OK};
 
 /// 将多个Result<T>的内容收集到Result<Vec<T>>中，当发生异常时会直接返回Err
 pub trait CollectResultTrait<T>: Sized
@@ -20,13 +20,13 @@ where
     {
         let mut res = vec![];
         for x in self {
-            if let std::result::Result::Ok(v) = x {
+            if let Ok(v) = x {
                 res.push(v);
             } else {
                 return Err(x.err().unwrap());
             }
         }
-        Ok(res)
+        OK(res)
     }
 }
 

@@ -1,28 +1,28 @@
 use std::collections::{BTreeMap, HashMap};
 
-use crate::{any::AnyValue, Ok, Result, Value};
+use crate::{any::AnyValue, Result, Value, OK};
 
 use super::{AnyContextTrait, ContextTrait};
 
 impl ContextTrait for HashMap<String, Value> {
     type Context = Value;
     fn get_value(&self, key: &str) -> Result<Option<&Value>> {
-        Ok(self.get(key))
+        OK(self.get(key))
     }
     fn insert_value(&mut self, key: &str, value: Value) -> Result<()> {
         self.insert(key.to_string(), value);
-        Ok(())
+        OK(())
     }
 }
 
 impl ContextTrait for HashMap<String, AnyValue> {
     type Context = AnyValue;
     fn get_value(&self, key: &str) -> Result<Option<&Value>> {
-        Ok(self.get(key).map(|x| x.to_ref::<Value>()))
+        OK(self.get(key).map(|x| x.to_ref::<Value>()))
     }
     fn insert_value(&mut self, key: &str, value: Value) -> Result<()> {
         self.insert(key.to_string(), AnyValue::new(value));
-        Ok(())
+        OK(())
     }
 }
 
@@ -38,10 +38,10 @@ impl AnyContextTrait for HashMap<String, AnyValue> {
 impl ContextTrait for BTreeMap<String, Value> {
     type Context = Value;
     fn get_value(&self, key: &str) -> Result<Option<&Value>> {
-        Ok(self.get(key))
+        OK(self.get(key))
     }
     fn insert_value(&mut self, key: &str, value: Value) -> Result<()> {
         self.insert(key.to_string(), value);
-        Ok(())
+        OK(())
     }
 }

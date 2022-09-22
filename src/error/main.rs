@@ -3,7 +3,12 @@ use std::collections::HashMap;
 use backtrace::Backtrace;
 use serde_json::json;
 
-use crate::{any::AnyValue, context::ContextTrait, Value, bean::AsValueTrait};
+use crate::{
+    any::AnyValue,
+    bean::{AsValueTrait, FromValueTrait},
+    context::ContextTrait,
+    Value,
+};
 
 use super::backtrace::enable_backtrace;
 
@@ -115,11 +120,11 @@ impl AppError {
             "code": self.code,
             "msg": self.msg,
             "msg_detail": self.msg_detail,
-        }).as_value().unwrap();
+        })
+        .as_value()
+        .unwrap();
         if !self.cause.is_empty() {
-            let cause = self
-                .cause
-                .to_ref::<Box<dyn std::error::Error + Send + Sync + 'static>>();
+            let cause = self.cause.to_ref::<Box<dyn std::error::Error + 'static>>();
             let cause_str = format!("{:?}", cause);
             ctx.insert_value("cause", Value::String(cause_str)).unwrap();
         }
@@ -133,7 +138,10 @@ impl AppError {
                 ctx.insert_value(k, v.clone()).unwrap();
             }
         }
-        ctx.to_string()
+        match serde_json::Value::from_value(&ctx) {
+            Ok(v) => serde_json::to_string(&v).unwrap_or("转换JSON格式失败".to_string()),
+            Err(e) => e.to_string(),
+        }
     }
 
     pub fn name_ref(&self) -> &str {

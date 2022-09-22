@@ -19,6 +19,11 @@ pub trait MergeTrait {
         Self: Sized;
 }
 
+/// 支持两个相同的Object对象进行合并
+pub trait DebugTrait {
+    fn debug_self(&self) -> String;
+}
+
 /// 支持某个对象合并Value内置对象
 pub trait MergeValueTrait {
     fn merge_value(&mut self, target: Option<&Value>) -> Result<Self>

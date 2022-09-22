@@ -1,10 +1,11 @@
 use std::collections::{BTreeMap, HashMap};
 
 use crate::{
+    bean::FromValueTrait,
     context::ContextTrait,
     error::{ERR_ARGUMENT, ERR_FORMAT},
     types::StringExt,
-    Result, Value,
+    Result, Value, OK,
 };
 
 use super::{
@@ -15,13 +16,14 @@ use super::{
 /// 根据内容文本渲染模板
 pub fn render_simple_template(template: String, value: &Value) -> Result<String> {
     let param = value.as_object()?;
-    let ctx = if param.contains_key("_root") && param.len() == 1 {
-        handlebars::Context::wraps(param.get("_root")).unwrap()
+    let mut ctx = handlebars::Context::null();
+    if param.contains_key("_root") && param.len() == 1 {
+        *ctx.data_mut() = serde_json::Value::from_value(param.get("_root").unwrap()).unwrap()
     } else {
-        handlebars::Context::wraps(param).unwrap()
+        *ctx.data_mut() = serde_json::Value::from_value(value).unwrap()
     };
     match get_handlebars().render_template_with_context(template.as_str(), &ctx) {
-        Ok(v) => Ok(v),
+        Ok(v) => OK(v),
         Err(e) => Err(ERR_FORMAT.msg_detail("模板渲染失败").cause(e)),
     }
 }
@@ -84,7 +86,7 @@ fn render_template_recursion_inner(
     let context_mut = unsafe {
         &mut *(context as *const HashMap<String, ContextType> as *mut HashMap<String, ContextType>)
     };
-    let mut param = BTreeMap::<String, Value>::new();
+    let param = &mut BTreeMap::<String, Value>::new();
     if !root_attrs.is_empty() {
         for item_name in root_attrs {
             match context.get(item_name) {
@@ -120,6 +122,14 @@ fn render_template_recursion_inner(
         },
         Err(e) => return Err(e),
     };
-    let res = render_simple_template(root_template, &Value::Object(param));
-    res.map(|x| (x, PLACE_CONTEXT.with(|ctx| ctx.borrow().clone())))
+
+    let res = render_simple_template(root_template, &Value::Object(param.clone()))?;
+    let mut res_map = BTreeMap::new();
+    PLACE_CONTEXT.with(|ctx| {
+        for v in ctx.borrow().iter() {
+            let value = param.get(v.1).unwrap().clone();
+            res_map.insert(v.0.to_string(), value);
+        }
+    });
+    OK((res, res_map))
 }

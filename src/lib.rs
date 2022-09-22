@@ -8,7 +8,9 @@ pub mod future;
 pub mod iter;
 pub mod page;
 pub mod template;
+
 pub mod types;
+pub use types::{Result, ResultExt, OK};
 
 mod value_type;
 pub use value_type::Value;
@@ -35,13 +37,4 @@ pub mod crates_builtin {
     pub use chrono;
     pub use serde_json;
     pub use serde_yaml;
-}
-
-/// 可代替std::result::Result<T, AnyError>操作的工具
-pub type Result<T> = std::result::Result<T, error::AppError>;
-
-/// 默认返回成功
-#[allow(non_snake_case)]
-pub fn Ok<T>(t: T) -> Result<T> {
-    std::result::Result::Ok(t)
 }

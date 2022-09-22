@@ -30,6 +30,12 @@ impl From<rbatis::Error> for AppError {
     }
 }
 
+impl From<rbs::Error> for AppError {
+    fn from(err: rbs::Error) -> Self {
+        ERR_DB_ACTION.cause(err)
+    }
+}
+
 impl From<hyper::Error> for AppError {
     fn from(err: hyper::Error) -> Self {
         ERR_WEB.cause(err)

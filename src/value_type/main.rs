@@ -4,7 +4,7 @@ use crate::{
     date::{Date, DateTime, Time, YearMonth},
     error::ERR_CAST,
     types::{DoubleExt, IntegerExt},
-    Ok, Result,
+    Result, OK,
 };
 
 /// 用于处理程序内置对象的工具
@@ -35,17 +35,17 @@ pub enum Value {
 impl Value {
     pub fn is_null(&self) -> Result<bool> {
         match *self {
-            Value::Null => Ok(true),
-            _ => Ok(false),
+            Value::Null => OK(true),
+            _ => OK(false),
         }
     }
 
     pub fn is_empty(&self) -> Result<bool> {
         match self {
-            Value::Null => Ok(true),
-            Value::String(v) => Ok(v.is_empty()),
-            Value::Array(v) => Ok(v.is_empty()),
-            Value::Object(v) => Ok(v.is_empty()),
+            Value::Null => OK(true),
+            Value::String(v) => OK(v.is_empty()),
+            Value::Array(v) => OK(v.is_empty()),
+            Value::Object(v) => OK(v.is_empty()),
             _ => {
                 Err(ERR_CAST
                     .msg_detail(format!("Value数据[{:?}]无法处理is_empty操作", self).as_str()))
@@ -55,13 +55,13 @@ impl Value {
 
     pub fn is_zero(&self) -> Result<bool> {
         match *self {
-            Value::Null => Ok(true),
-            Value::I32(v) => Ok(v == 0),
-            Value::I64(v) => Ok(v == 0),
-            Value::U32(v) => Ok(v == 0),
-            Value::U64(v) => Ok(v == 0),
-            Value::F32(v) => Ok(v == 0.0),
-            Value::F64(v) => Ok(v == 0.0),
+            Value::Null => OK(true),
+            Value::I32(v) => OK(v == 0),
+            Value::I64(v) => OK(v == 0),
+            Value::U32(v) => OK(v == 0),
+            Value::U64(v) => OK(v == 0),
+            Value::F32(v) => OK(v == 0.0),
+            Value::F64(v) => OK(v == 0.0),
             _ => {
                 Err(ERR_CAST
                     .msg_detail(format!("Value数据[{:?}]无法处理is_zero操作", self).as_str()))
@@ -71,7 +71,7 @@ impl Value {
 
     pub fn as_null(&self) -> Result<()> {
         match *self {
-            Value::Null => Ok(()),
+            Value::Null => OK(()),
             _ => {
                 Err(ERR_CAST
                     .msg_detail(format!("Value数据[{:?}]不能转换为null类型", self).as_str()))
@@ -81,7 +81,7 @@ impl Value {
 
     pub fn as_str(&self) -> Result<&str> {
         match *self {
-            Value::String(ref v) => Ok(v),
+            Value::String(ref v) => OK(v),
             _ => {
                 Err(ERR_CAST
                     .msg_detail(format!("Value数据[{:?}]不能转换为&str类型", self).as_str()))
@@ -91,7 +91,7 @@ impl Value {
 
     pub fn as_str_mut(&mut self) -> Result<&mut str> {
         match *self {
-            Value::String(ref mut v) => Ok(v),
+            Value::String(ref mut v) => OK(v),
             _ => Err(ERR_CAST
                 .msg_detail(format!("Value数据[{:?}]不能转换为&mut str类型", self).as_str())),
         }
@@ -99,7 +99,7 @@ impl Value {
 
     pub fn as_bool(&self) -> Result<bool> {
         match *self {
-            Value::Bool(v) => Ok(v),
+            Value::Bool(v) => OK(v),
             _ => {
                 Err(ERR_CAST
                     .msg_detail(format!("Value数据[{:?}]不能转换为bool类型", self).as_str()))
@@ -109,10 +109,10 @@ impl Value {
 
     pub fn as_i32(&self) -> Result<i32> {
         match *self {
-            Value::I32(v) => Ok(v),
-            Value::I64(v) => Ok(v.cast_to_i32()?),
-            Value::U32(v) => Ok(v.cast_to_i32()?),
-            Value::U64(v) => Ok(v.cast_to_i32()?),
+            Value::I32(v) => OK(v),
+            Value::I64(v) => OK(v.cast_to_i32()?),
+            Value::U32(v) => OK(v.cast_to_i32()?),
+            Value::U64(v) => OK(v.cast_to_i32()?),
             _ => {
                 Err(ERR_CAST.msg_detail(format!("Value数据[{:?}]不能转换为i32类型", self).as_str()))
             }
@@ -121,10 +121,10 @@ impl Value {
 
     pub fn as_i64(&self) -> Result<i64> {
         match *self {
-            Value::I32(v) => Ok(v.cast_to_i64()?),
-            Value::I64(v) => Ok(v),
-            Value::U32(v) => Ok(v.cast_to_i64()?),
-            Value::U64(v) => Ok(v.cast_to_i64()?),
+            Value::I32(v) => OK(v.cast_to_i64()?),
+            Value::I64(v) => OK(v),
+            Value::U32(v) => OK(v.cast_to_i64()?),
+            Value::U64(v) => OK(v.cast_to_i64()?),
             _ => {
                 Err(ERR_CAST.msg_detail(format!("Value数据[{:?}]不能转换为i64类型", self).as_str()))
             }
@@ -133,10 +133,10 @@ impl Value {
 
     pub fn as_u64(&self) -> Result<u64> {
         match *self {
-            Value::I32(v) => Ok(v.cast_to_u64()?),
-            Value::I64(v) => Ok(v.cast_to_u64()?),
-            Value::U32(v) => Ok(v.cast_to_u64()?),
-            Value::U64(v) => Ok(v),
+            Value::I32(v) => OK(v.cast_to_u64()?),
+            Value::I64(v) => OK(v.cast_to_u64()?),
+            Value::U32(v) => OK(v.cast_to_u64()?),
+            Value::U64(v) => OK(v),
             _ => {
                 Err(ERR_CAST.msg_detail(format!("Value数据[{:?}]不能转换为u64类型", self).as_str()))
             }
@@ -145,8 +145,8 @@ impl Value {
 
     pub fn as_f64(&self) -> Result<f64> {
         match *self {
-            Value::F32(v) => Ok(v.cast_to_f64()?),
-            Value::F64(v) => Ok(v),
+            Value::F32(v) => OK(v.cast_to_f64()?),
+            Value::F64(v) => OK(v),
             _ => {
                 Err(ERR_CAST.msg_detail(format!("Value数据[{:?}]不能转换为f64类型", self).as_str()))
             }
@@ -155,7 +155,7 @@ impl Value {
 
     pub fn as_binary(&self) -> Result<&Vec<u8>> {
         match *self {
-            Value::Binary(ref v) => Ok(v),
+            Value::Binary(ref v) => OK(v),
             _ => {
                 Err(ERR_CAST
                     .msg_detail(format!("Value数据[{:?}]不能转换为Binary类型", self).as_str()))
@@ -169,7 +169,7 @@ impl Value {
 
     pub fn as_array(&self) -> Result<&Vec<Value>> {
         match *self {
-            Value::Array(ref v) => Ok(v),
+            Value::Array(ref v) => OK(v),
             _ => Err(ERR_CAST
                 .msg_detail(format!("Value数据[{:?}]不能转换为&Vec<Value>类型", self).as_str())),
         }
@@ -177,7 +177,7 @@ impl Value {
 
     pub fn as_array_mut(&mut self) -> Result<&mut Vec<Value>> {
         match *self {
-            Value::Array(ref mut v) => Ok(v),
+            Value::Array(ref mut v) => OK(v),
             _ => Err(ERR_CAST.msg_detail(
                 format!("Value数据[{:?}]不能转换为&mut Vec<Value>类型", self).as_str(),
             )),
@@ -190,7 +190,7 @@ impl Value {
 
     pub fn as_object(&self) -> Result<&BTreeMap<String, Value>> {
         match *self {
-            Value::Object(ref v) => Ok(v),
+            Value::Object(ref v) => OK(v),
             _ => Err(ERR_CAST.msg_detail(
                 format!(
                     "Value数据[{:?}]不能转换为&BTreeMap<String, Value>类型",
@@ -204,7 +204,7 @@ impl Value {
     #[allow(clippy::cast_ref_to_mut)]
     pub fn as_object_mut(&self) -> Result<&mut BTreeMap<String, Value>> {
         match *self {
-            Value::Object(ref v) => Ok(unsafe {
+            Value::Object(ref v) => OK(unsafe {
                 &mut *(v as *const BTreeMap<String, Value> as *mut BTreeMap<String, Value>)
             }),
             _ => Err(ERR_CAST.msg_detail(
@@ -220,7 +220,7 @@ impl Value {
     pub fn as_date(&self) -> Result<Date> {
         match self {
             Value::String(v) => Date::parse_str(v.as_str()),
-            Value::Date(v) => Ok(*v),
+            Value::Date(v) => OK(*v),
             _ => {
                 Err(ERR_CAST
                     .msg_detail(format!("Value数据[{:?}]不能转换为Date类型", self).as_str()))
@@ -231,7 +231,7 @@ impl Value {
     pub fn as_datetime(&self) -> Result<DateTime> {
         match self {
             Value::String(v) => DateTime::parse_str(v.as_str()),
-            Value::DateTime(v) => Ok(*v),
+            Value::DateTime(v) => OK(*v),
             _ => Err(ERR_CAST
                 .msg_detail(format!("Value数据[{:?}]不能转换为YearMonth类型", self).as_str())),
         }
@@ -240,7 +240,7 @@ impl Value {
     pub fn as_time(&self) -> Result<Time> {
         match self {
             Value::String(v) => Time::parse_str(v.as_str()),
-            Value::Time(v) => Ok(*v),
+            Value::Time(v) => OK(*v),
             _ => {
                 Err(ERR_CAST
                     .msg_detail(format!("Value数据[{:?}]不能转换为Time类型", self).as_str()))
@@ -253,7 +253,7 @@ impl Value {
             Value::String(v) => YearMonth::parse_str(v.as_str()),
             Value::Date(v) => YearMonth::from_chrono_date(&v.to_chrono_date()),
             Value::DateTime(v) => YearMonth::from_chrono_date(&v.to_chrono_date()),
-            Value::YearMonth(v) => Ok(*v),
+            Value::YearMonth(v) => OK(*v),
             _ => Err(ERR_CAST
                 .msg_detail(format!("Value数据[{:?}]不能转换为YearMonth类型", self).as_str())),
         }

@@ -1,4 +1,4 @@
-use crate::{bean::AsValueTrait, date::YearMonth, error::ERR_DATA, Ok, Result, Value};
+use crate::{bean::AsValueTrait, date::YearMonth, error::ERR_DATA, Result, Value, OK};
 
 /// 键为字符类型的上下文工具类
 pub trait ContextTrait {
@@ -11,7 +11,7 @@ pub trait ContextTrait {
     /// 集合类中取出字符类型
     fn get_string(&self, key: &str) -> Result<String> {
         match self.get_value(key) {
-            std::result::Result::Ok(v) => match v {
+            Ok(v) => match v {
                 Some(v2) => v2.as_str().map(|x| x.to_string()),
                 None => Err(ERR_DATA.msg_detail(format!("{}不能为空", key).as_str())),
             },
@@ -25,9 +25,9 @@ pub trait ContextTrait {
     /// 集合类中取出字符类型
     fn get_opt_string(&self, key: &str) -> Result<Option<String>> {
         match self.get_value(key) {
-            std::result::Result::Ok(v) => match v {
+            Ok(v) => match v {
                 Some(v2) => v2.as_str().map(|x| Some(x.to_string())),
-                None => Ok(None),
+                None => OK(None),
             },
             Err(e) => Err(e),
         }
@@ -37,14 +37,14 @@ pub trait ContextTrait {
         if let Some(v) = value {
             self.insert_value(key, Value::String(v))
         } else {
-            Ok(())
+            OK(())
         }
     }
 
     /// 集合类中取出布尔类型
     fn get_bool(&self, key: &str) -> Result<bool> {
         match self.get_value(key) {
-            std::result::Result::Ok(v) => match v {
+            Ok(v) => match v {
                 Some(v2) => v2.as_bool(),
                 None => Err(ERR_DATA.msg_detail(format!("{}不能为空", key).as_str())),
             },
@@ -54,9 +54,9 @@ pub trait ContextTrait {
     /// 集合类中取出布尔类型
     fn get_bool_or(&self, key: &str, default: bool) -> Result<bool> {
         match self.get_value(key) {
-            std::result::Result::Ok(v) => match v {
+            Ok(v) => match v {
                 Some(v2) => v2.as_bool(),
-                None => Ok(default),
+                None => OK(default),
             },
             Err(e) => Err(e),
         }
@@ -69,7 +69,7 @@ pub trait ContextTrait {
     /// 集合类中取出i64类型
     fn get_i64(&self, key: &str) -> Result<i64> {
         match self.get_value(key) {
-            std::result::Result::Ok(v) => match v {
+            Ok(v) => match v {
                 Some(v2) => v2.as_i64(),
                 None => Err(ERR_DATA.msg_detail(format!("{}不能为空", key).as_str())),
             },
@@ -83,9 +83,9 @@ pub trait ContextTrait {
     /// 集合类中取出i64类型
     fn get_opt_i64(&self, key: &str) -> Result<Option<i64>> {
         match self.get_value(key) {
-            std::result::Result::Ok(v) => match v {
+            Ok(v) => match v {
                 Some(v2) => v2.as_i64().map(Some),
-                None => Ok(None),
+                None => OK(None),
             },
             Err(e) => Err(e),
         }
@@ -95,14 +95,14 @@ pub trait ContextTrait {
         if let Some(v) = value {
             self.insert_value(key, Value::I64(v))
         } else {
-            Ok(())
+            OK(())
         }
     }
 
     /// 集合类中取出u64类型
     fn get_u64(&self, key: &str) -> Result<u64> {
         match self.get_value(key) {
-            std::result::Result::Ok(v) => match v {
+            Ok(v) => match v {
                 Some(v2) => v2.as_u64(),
                 None => Err(ERR_DATA.msg_detail(format!("{}不能为空", key).as_str())),
             },
@@ -116,9 +116,9 @@ pub trait ContextTrait {
     /// 集合类中取出i64类型
     fn get_opt_u64(&self, key: &str) -> Result<Option<u64>> {
         match self.get_value(key) {
-            std::result::Result::Ok(v) => match v {
+            Ok(v) => match v {
                 Some(v2) => v2.as_u64().map(Some),
-                None => Ok(None),
+                None => OK(None),
             },
             Err(e) => Err(e),
         }
@@ -128,14 +128,14 @@ pub trait ContextTrait {
         if let Some(v) = value {
             self.insert_value(key, Value::U64(v))
         } else {
-            Ok(())
+            OK(())
         }
     }
 
     /// 集合类中取出f64类型
     fn get_f64(&self, key: &str) -> Result<f64> {
         match self.get_value(key) {
-            std::result::Result::Ok(v) => match v {
+            Ok(v) => match v {
                 Some(v2) => v2.as_f64(),
                 None => Err(ERR_DATA.msg_detail(format!("{}不能为空", key).as_str())),
             },
@@ -149,9 +149,9 @@ pub trait ContextTrait {
     /// 集合类中取出f64类型
     fn get_opt_f64(&self, key: &str) -> Result<Option<f64>> {
         match self.get_value(key) {
-            std::result::Result::Ok(v) => match v {
+            Ok(v) => match v {
                 Some(v2) => v2.as_f64().map(Some),
-                None => Ok(None),
+                None => OK(None),
             },
             Err(e) => Err(e),
         }
@@ -161,14 +161,14 @@ pub trait ContextTrait {
         if let Some(v) = value {
             self.insert_value(key, Value::F64(v))
         } else {
-            Ok(())
+            OK(())
         }
     }
 
     /// 集合类中取出年月类型
     fn get_yearmonth(&self, key: &str) -> Result<YearMonth> {
         match self.get_value(key) {
-            std::result::Result::Ok(v) => match v {
+            Ok(v) => match v {
                 Some(v2) => v2.as_year_month(),
                 None => Err(ERR_DATA.msg_detail(format!("{}不能为空", key).as_str())),
             },
@@ -182,9 +182,9 @@ pub trait ContextTrait {
     /// 集合类中取出年月类型
     fn get_opt_yearmonth(&self, key: &str) -> Result<Option<YearMonth>> {
         match self.get_value(key) {
-            std::result::Result::Ok(v) => match v {
+            Ok(v) => match v {
                 Some(v2) => v2.as_year_month().map(Some),
-                None => Ok(None),
+                None => OK(None),
             },
             Err(e) => Err(e),
         }
@@ -194,7 +194,7 @@ pub trait ContextTrait {
         if let Some(v) = value {
             self.insert_value(key, Value::YearMonth(v))
         } else {
-            Ok(())
+            OK(())
         }
     }
 

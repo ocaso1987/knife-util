@@ -1,7 +1,7 @@
 use globset::Glob;
 use regex::Regex;
 
-use crate::{error::ERR_CONVERT, Result};
+use crate::{error::ERR_CONVERT, Result, OK};
 
 /// 用于字符串处理的工具类
 pub trait StringExt {
@@ -13,6 +13,9 @@ pub trait StringExt {
 
     /// 显示紧凑格式
     fn compact(&self) -> String;
+
+    /// 去除首尾空格
+    fn trim_both(&self) -> String;
 
     /// 根据正则匹配并进行字符替换
     fn regex_replace_all(&self, pattern: String, replacement: String) -> String;
@@ -27,33 +30,30 @@ pub trait StringExt {
     fn contains_ignore_case(&self, pat: String) -> bool;
 }
 
-impl<T> StringExt for T
-where
-    T: Into<String> + Clone,
-{
+impl StringExt for &str {
     fn str_to_bool(&self) -> Result<bool> {
-        let str: String = self.clone().into();
-        return match str.to_lowercase().as_str() {
-            "true" => Ok(true),
-            "t" => Ok(true),
-            "false" => Ok(false),
-            "f" => Ok(false),
-            "yes" => Ok(true),
-            "y" => Ok(true),
-            "no" => Ok(false),
-            "n" => Ok(false),
-            "on" => Ok(true),
-            "off" => Ok(false),
-            "1" => Ok(true),
-            "0" => Ok(false),
-            _ => Err(ERR_CONVERT.msg_detail(format!("字符串[{}]不能转换为bool类型", str).as_str())),
+        return match self.to_lowercase().as_str() {
+            "true" => OK(true),
+            "t" => OK(true),
+            "false" => OK(false),
+            "f" => OK(false),
+            "yes" => OK(true),
+            "y" => OK(true),
+            "no" => OK(false),
+            "n" => OK(false),
+            "on" => OK(true),
+            "off" => OK(false),
+            "1" => OK(true),
+            "0" => OK(false),
+            _ => {
+                Err(ERR_CONVERT.msg_detail(format!("字符串[{}]不能转换为bool类型", self).as_str()))
+            }
         };
     }
 
     fn if_blank(&self, default_value: String) -> String {
-        let str: String = self.clone().into();
-        if !str.is_empty() {
-            str
+        if !self.is_empty() {
+            self.to_string()
         } else {
             default_value
         }
@@ -61,30 +61,65 @@ where
 
     fn compact(&self) -> String {
         self.regex_replace_all("[ \t\r\n]+".to_string(), " ".to_string())
+            .trim_both()
+    }
+
+    fn trim_both(&self) -> String {
+        self.trim_start().trim_end().to_string()
     }
 
     fn regex_replace_all(&self, pattern: String, replacement: String) -> String {
-        let str: String = self.clone().into();
         let regex = Regex::new(pattern.as_str()).expect("错误的正则表达式");
-        regex.replace_all(str.as_str(), replacement).to_string()
+        regex.replace_all(self, replacement).to_string()
     }
 
     fn regex_match(&self, pattern: String) -> bool {
-        let str: String = self.clone().into();
-        Regex::new(pattern.as_str()).unwrap().is_match(str.as_str())
+        Regex::new(pattern.as_str()).unwrap().is_match(self)
     }
 
     fn glob_match(&self, pattern: String) -> bool {
-        let str: String = self.clone().into();
         Glob::new(pattern.as_str())
             .unwrap()
             .compile_matcher()
-            .is_match(str)
+            .is_match(self)
     }
 
     fn contains_ignore_case(&self, pat: String) -> bool {
-        let str: String = self.clone().into();
-        str.to_lowercase().contains(&pat.to_lowercase())
+        self.to_lowercase().contains(&pat.to_lowercase())
+    }
+}
+
+impl StringExt for String {
+    fn str_to_bool(&self) -> Result<bool> {
+        self.as_str().str_to_bool()
+    }
+
+    fn if_blank(&self, default_value: String) -> String {
+        self.as_str().if_blank(default_value)
+    }
+
+    fn compact(&self) -> String {
+        self.as_str().compact()
+    }
+
+    fn trim_both(&self) -> String {
+        self.as_str().trim_both()
+    }
+
+    fn regex_replace_all(&self, pattern: String, replacement: String) -> String {
+        self.as_str().regex_replace_all(pattern, replacement)
+    }
+
+    fn regex_match(&self, pattern: String) -> bool {
+        self.as_str().regex_match(pattern)
+    }
+
+    fn glob_match(&self, pattern: String) -> bool {
+        self.as_str().glob_match(pattern)
+    }
+
+    fn contains_ignore_case(&self, pat: String) -> bool {
+        self.as_str().contains_ignore_case(pat)
     }
 }
 
